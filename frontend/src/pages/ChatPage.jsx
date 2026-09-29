@@ -82,6 +82,7 @@ export default function ChatPage({
             report: response.report,
             intent: response.intent,
             suggestions: response.suggestions || [],
+            memory_indexed: response.memory_indexed,
           };
 
           setMessages((prev) => [...prev, assistantMsg]);

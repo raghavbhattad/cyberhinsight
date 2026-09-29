@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Split, Loader2 } from 'lucide-react';
+import { Split, Loader2, Check } from 'lucide-react';
 import SourcesChip from './SourcesChip';
 import FeedbackBar from './FeedbackBar';
 import ReportCard from './ReportCard';
 import CompareCard from './CompareCard';
-import { sendChat } from '../../services/api';
+import { sendChat, getMemoryIndexingStatus } from '../../services/api';
 
 export default function AssistantMessage({
   message,
@@ -23,6 +23,34 @@ export default function AssistantMessage({
     suggestions = [],
     intent,
   } = message;
+
+  const [isIndexed, setIsIndexed] = useState(message.memory_indexed ?? false);
+
+  useEffect(() => {
+    if (!report?.id || isIndexed) return;
+    let timer;
+    let attempts = 0;
+    const maxAttempts = 8; // poll every 2s for up to 16s
+
+    const checkIndex = async () => {
+      attempts++;
+      try {
+        const res = await getMemoryIndexingStatus(report.id);
+        if (res.data?.indexed) {
+          setIsIndexed(true);
+          return;
+        }
+      } catch (e) {
+        // ignore
+      }
+      if (attempts < maxAttempts) {
+        timer = setTimeout(checkIndex, 2000);
+      }
+    };
+
+    timer = setTimeout(checkIndex, 2000);
+    return () => clearTimeout(timer);
+  }, [report?.id, isIndexed]);
 
   const handleCompareWithoutMemory = async () => {
     if (baselineAnswer) {
@@ -67,6 +95,33 @@ export default function AssistantMessage({
       <div className="meta-row">
         {/* Recalled Memory Chip */}
         <SourcesChip sources={sources} />
+
+        {/* Indexing status badge for stored investigations */}
+        {report?.memory_stored && (
+          <span
+            className="flex items-center gap-1"
+            style={{
+              fontSize: '11px',
+              color: isIndexed ? 'var(--accent-teal)' : 'var(--text-muted)',
+              backgroundColor: isIndexed ? 'var(--bg-accent-soft)' : 'var(--bg-surface)',
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-full)',
+              border: `1px solid ${isIndexed ? 'rgba(15, 118, 110, 0.2)' : 'var(--border-color)'}`,
+            }}
+          >
+            {isIndexed ? (
+              <>
+                <Check size={11} />
+                <span>Memory indexed ✓</span>
+              </>
+            ) : (
+              <>
+                <Loader2 size={11} className="spin" />
+                <span>Indexing memory…</span>
+              </>
+            )}
+          </span>
+        )}
 
         {/* Feedback (only on investigations) */}
         {report?.id && <FeedbackBar incidentId={report.id} />}

@@ -19,6 +19,7 @@ _HISTORY_PATTERNS = [
     re.compile(r'\b(?:last time|which hosts|who was affected|how many times|past incidents|history of)\b', re.IGNORECASE),
     re.compile(r'\b(?:what worked|what failed|effective against|past resolution|previous resolution)\b', re.IGNORECASE),
     re.compile(r'\b(?:campaign pattern|recurring attack|prior alerts|incident history)\b', re.IGNORECASE),
+    re.compile(r'\b(?:recommend(?:ed)? for (?:that|this|the)|did you recommend|was recommended|actions for (?:that|this|the))\b', re.IGNORECASE),
 ]
 
 _INVESTIGATE_TRIGGERS = [

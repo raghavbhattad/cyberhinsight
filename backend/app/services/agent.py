@@ -26,6 +26,7 @@ class SecurityAgent:
         description: str,
         use_memory: bool = True,
         incident_store_items: list[dict] | None = None,
+        progress_callback = None,
     ) -> dict:
         """Full investigation pipeline:
         1. Extract IOCs deterministically
@@ -56,6 +57,8 @@ class SecurityAgent:
             t0 = time.time()
             memory_matches = await self.memory.recall_similar(clean_desc)
             timings["recall_ms"] = int((time.time() - t0) * 1000)
+            if progress_callback:
+                await progress_callback("recall_done", len(memory_matches))
 
         # 3. Build prompt
         if memory_matches:
@@ -98,6 +101,8 @@ class SecurityAgent:
             analysis = LLMAnalysis.model_validate(parsed)  # Let it raise if still bad
 
         timings["llm_ms"] = int((time.time() - t0) * 1000)
+        if progress_callback:
+            await progress_callback("analysis_done", analysis.category)
 
         # Merge IOCs (deterministic + LLM)
         merged_indicators = merge_iocs(incident_iocs, analysis.indicators)
@@ -115,6 +120,8 @@ class SecurityAgent:
             predicted_escalation = predict_escalation(
                 campaign_link, memory_matches, store_items
             )
+        if progress_callback:
+            await progress_callback("campaign_done", campaign_link)
 
         # 7. Retain in Hindsight (only because analysis validated and use_memory is True)
         memory_stored = False
@@ -162,6 +169,9 @@ class SecurityAgent:
                 timestamp=datetime.now(timezone.utc),
             )
             timings["retain_ms"] = int((time.time() - t0) * 1000)
+
+        if progress_callback:
+            await progress_callback("saved", memory_stored)
 
         logger.info(
             "Investigation complete: id=%s, severity=%s, memory_matches=%d, "

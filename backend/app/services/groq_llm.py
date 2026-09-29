@@ -59,44 +59,67 @@ class GroqLLMService:
         raise LLMError(f"LLM failed after retries: {type(last_err).__name__}: {last_err}")
 
     async def generate_text(
-        self, system_prompt: str, user_prompt: str, temperature: float = 0.3
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.3,
+        history: list[dict] | None = None,
     ) -> str:
-        """Call LLM returning plain Markdown text (not constrained to JSON)."""
+        """Call LLM returning plain Markdown text (not constrained to JSON), with optional conversation history."""
         models = [self.model]
         if self.fallback_model:
             models.append(self.fallback_model)
+
+        messages = [{"role": "system", "content": system_prompt}]
+        if history:
+            for turn in history:
+                role = turn.get("role", "user")
+                if role in ("user", "assistant"):
+                    messages.append({"role": role, "content": str(turn.get("content", ""))})
+        messages.append({"role": "user", "content": user_prompt})
+
+        last_err: Exception | None = None
         for model in models:
             try:
                 resp = await self.client.chat.completions.create(
                     model=model,
                     temperature=temperature,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
+                    messages=messages,
                 )
                 return resp.choices[0].message.content or ""
             except Exception as e:
+                last_err = e
                 logger.warning("LLM text generation failed for model %s: %s", model, e)
-        raise LLMError("LLM text generation failed across all available models")
+        raise LLMError(f"LLM text generation failed across all available models: {last_err}")
 
     async def stream_text(
-        self, system_prompt: str, user_prompt: str, temperature: float = 0.3
+        self,
+        system_prompt: str,
+        user_prompt: str,
+        temperature: float = 0.3,
+        history: list[dict] | None = None,
     ):
-        """Async generator streaming text tokens from the LLM."""
+        """Async generator streaming text tokens from the LLM with optional conversation history."""
         models = [self.model]
         if self.fallback_model:
             models.append(self.fallback_model)
+
+        messages = [{"role": "system", "content": system_prompt}]
+        if history:
+            for turn in history:
+                role = turn.get("role", "user")
+                if role in ("user", "assistant"):
+                    messages.append({"role": role, "content": str(turn.get("content", ""))})
+        messages.append({"role": "user", "content": user_prompt})
+
+        last_err: Exception | None = None
         for model in models:
             try:
                 stream = await self.client.chat.completions.create(
                     model=model,
                     temperature=temperature,
                     stream=True,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_prompt},
-                    ],
+                    messages=messages,
                 )
                 async for chunk in stream:
                     delta = chunk.choices[0].delta.content or ""
@@ -104,8 +127,10 @@ class GroqLLMService:
                         yield delta
                 return
             except Exception as e:
+                last_err = e
                 logger.warning("LLM text streaming failed for model %s: %s", model, e)
-        yield "I encountered a communication error with the analysis model. Please try again."
+
+        raise LLMError(f"LLM text streaming failed across all available models: {last_err}")
 
     async def check_connection(self) -> bool:
         """Cached for 30s so /health doesn't burn tokens on every poll."""

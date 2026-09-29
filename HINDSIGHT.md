@@ -135,3 +135,48 @@ This distills all historical outcome memories for a threat category into plain-E
 4. **Hindsight Recall**: The note is retrieved during vector recall and injected into `<memory>` tags.
 5. **Prompt Directives**: The LLM prompt specifically directs the agent to adapt severity and actions based on recalled organizational notes.
 6. **Adapted Answer**: The resulting investigation elevates the incident to `CRITICAL` citing the CFO laptop ownership directly from memory.
+
+---
+
+## 7. Indexing Latency & The Immediate Follow-Up Guarantee
+
+### The Latency Challenge
+When an incident is investigated and retained into Hindsight Cloud (`aretain`), background indexing typically takes 1 to 3 seconds before the document becomes searchable via vector recall. If an analyst immediately follows up with *"Have we seen that IP before?"*, a naive vector search could produce a false-negative *"No record found"*.
+
+### CyberHinsight's Multi-Tiered Solution
+1. **Active Awaiting**: `wait_for_memory(query_token, timeout_s=3.0)` polls Hindsight recall briefly after retention.
+2. **Visual Transparency**: The UI displays an `Indexing memory…` status chip which polls `GET /api/memory/status/{doc_id}` every 2 seconds, smoothly transitioning to `Memory indexed ✓`.
+3. **Honest Local Incident Store Fallback**: If remote vector indexing has not yet finalized when an immediate query arrives, CyberHinsight checks the local in-memory incident log (`incident_store`). If matched, the result is returned with `kind="local_log"`, `score=1.0`, and full factual evidence, guaranteeing that an incident investigated seconds ago is never forgotten.
+
+---
+
+## 8. Two-Prong Recall & Pronoun Resolution
+
+### Two-Prong Recall Queries
+Queries like *"Have we seen 198.51.100.45 before in prior incidents?"* contain both technical indicators and conversational framing. CyberHinsight runs a two-pronged recall:
+1. **Indicator Query**: Queries Hindsight directly with extracted technical tokens (e.g., `198.51.100.45`).
+2. **Semantic Query**: Queries Hindsight with the full natural-language sentence.
+The results are merged and deduplicated, guaranteeing technical precision alongside semantic breadth.
+
+### Pronoun & Asset Resolution
+When analysts ask conversational follow-up questions referencing pronouns (e.g., *"What did you recommend for that host?"* or *"Was that IP blocked?"*):
+* The orchestrator inspects the conversation's previous assistant turn.
+* If the previous turn investigated an incident with `affected_asset` (e.g., `FIN-WS-042`), the pronoun query resolves to the explicit asset context.
+
+---
+
+## 9. Relevance Score Floor (`MIN_RECALL_SCORE=0.15`)
+
+To prevent irrelevant vector matches from diluting the LLM's prompt context:
+* All recalled items with an empirical relevance score below `MIN_RECALL_SCORE` (default `0.15`) are discarded.
+* If all recalled items fall below the threshold and no local incident matches exist, the assistant returns an honest *"I have no prior record of this indicator"* response rather than hallucinating or speculating.
+
+---
+
+## 10. Pattern Reflection with 60-Second Caching
+
+For macro-level queries (e.g., *"What worked last time for phishing in Finance?"* or *"What campaign trends exist?"*):
+* The orchestrator calls Hindsight's `areflect` API (`budget="mid"`, filtered by category tags).
+* Responses are cached for 60 seconds to provide responsive answers while saving LLM tokens.
+* The synthesized pattern is included as an `observation` source in the response metadata drawer.
+

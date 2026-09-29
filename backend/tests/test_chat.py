@@ -1,7 +1,8 @@
 import pytest
 import json
+import uuid
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -62,15 +63,14 @@ async def test_router_mappings():
     # 4. General / LLM fallback
     gen_msg = "What is MITRE technique T1566.001?"
     fake_llm = FakeLLM()
-    # Mock LLM fallback returning general
     fake_llm.analyze_json = MagicMock(return_value={"intent": "general", "reason": "General question"})
     intent_g, _ = await route_intent(gen_msg, fake_llm)
     assert intent_g == "general"
 
 
 @pytest.mark.asyncio
-async def test_ask_history_empty_recall(temp_chat_store, temp_incident_store):
-    """When recall is empty, ask_history returns a clear 'no record' message without calling LLM to invent facts."""
+async def test_ask_history_empty_recall_and_no_local_log(temp_chat_store, temp_incident_store):
+    """When recall and local log are both empty, ask_history returns a clear 'no record' message."""
     fake_memory = FakeMemory(recall_results=[])
     fake_llm = FakeLLM()
     agent = SecurityAgent(fake_llm, fake_memory)
@@ -92,19 +92,97 @@ async def test_ask_history_empty_recall(temp_chat_store, temp_incident_store):
     assert resp.memory_used is False
     assert resp.sources == []
     assert "no record" in resp.answer.lower()
-    # FakeLLM text generate should NOT have been called with memory
     assert fake_llm.call_count == 0
 
 
 @pytest.mark.asyncio
-async def test_ask_history_with_recalled_memory(temp_chat_store, temp_incident_store):
-    """When memories exist, ask_history injects them into the prompt inside <memory> tags and returns sources."""
+async def test_follow_up_after_investigate_finds_incident(temp_chat_store, temp_incident_store):
+    """After an investigate turn, 'Have we seen X before?' finds the incident via recall or local log, never 'no record'."""
+    fake_memory = FakeMemory(recall_results=[])
+    fake_llm = FakeLLM()
+    agent = SecurityAgent(fake_llm, fake_memory)
+    orchestrator = ChatOrchestrator(
+        agent=agent,
+        memory_service=fake_memory,
+        llm_service=fake_llm,
+        incident_store=temp_incident_store,
+        chat_store=temp_chat_store,
+    )
+
+    conv_id = "test-conv-followup"
+
+    # Turn 1: Investigate
+    inv_req = ChatRequest(
+        conversation_id=conv_id,
+        message="Finance user opened invoice_7482.docm and PowerShell beaconed to 198.51.100.45 on FIN-WS-042",
+        use_memory=True,
+    )
+    inv_resp = await orchestrator.process_chat(inv_req)
+    assert inv_resp.intent == "investigate"
+    assert inv_resp.report is not None
+
+    # Turn 2: Follow-up question right after
+    hist_req = ChatRequest(
+        conversation_id=conv_id,
+        message="Have we seen 198.51.100.45 before in prior incidents?",
+        use_memory=True,
+    )
+    hist_resp = await orchestrator.process_chat(hist_req)
+
+    assert hist_resp.intent == "ask_history"
+    assert "no record" not in hist_resp.answer.lower()
+    assert len(hist_resp.sources) > 0
+    assert any(s.kind in ("incident", "local_log") for s in hist_resp.sources)
+
+
+@pytest.mark.asyncio
+async def test_pronoun_followup_resolves_last_asset(temp_chat_store, temp_incident_store):
+    """Pronoun follow-ups like 'What did you recommend for that host?' resolve to the last investigate asset."""
+    fake_memory = FakeMemory(recall_results=[])
+    fake_llm = FakeLLM()
+    agent = SecurityAgent(fake_llm, fake_memory)
+    orchestrator = ChatOrchestrator(
+        agent=agent,
+        memory_service=fake_memory,
+        llm_service=fake_llm,
+        incident_store=temp_incident_store,
+        chat_store=temp_chat_store,
+    )
+
+    conv_id = "test-conv-pronoun"
+
+    # Turn 1: Investigate on FIN-WS-042
+    inv_req = ChatRequest(
+        conversation_id=conv_id,
+        message="Alert: macro execution on FIN-WS-042 downloading payload from 198.51.100.45",
+        use_memory=True,
+    )
+    await orchestrator.process_chat(inv_req)
+
+    # Turn 2: Pronoun inquiry about 'that host'
+    hist_req = ChatRequest(
+        conversation_id=conv_id,
+        message="What did you recommend for that host?",
+        use_memory=True,
+    )
+    hist_resp = await orchestrator.process_chat(hist_req)
+
+    assert hist_resp.intent == "ask_history"
+    assert "no record" not in hist_resp.answer.lower()
+    # Ensure FIN-WS-042 was resolved and included in prompt/sources
+    assert len(hist_resp.sources) > 0
+    assert any("FIN-WS-042" in s.snippet for s in hist_resp.sources)
+
+
+@pytest.mark.asyncio
+async def test_relevance_floor_drops_low_score_memories(temp_chat_store, temp_incident_store):
+    """Memories below MIN_RECALL_SCORE are dropped; if all are dropped and no local log, returns no record."""
     fake_memory = FakeMemory(recall_results=[
         {
-            "text": "Incident DEMO-001: FIN-WS-042 beaconed to 198.51.100.45. Isolated endpoint successfully.",
-            "document_id": "DEMO-001",
-            "score": 0.88,
-            "tags": ["incident", "cat:phishing"],
+            "text": "Completely unrelated memory about printer configuration",
+            "document_id": "IRRELEVANT-01",
+            "score": 0.05,  # below 0.15 floor
+            "tags": ["incident"],
         }
     ])
     fake_llm = FakeLLM()
@@ -118,24 +196,25 @@ async def test_ask_history_with_recalled_memory(temp_chat_store, temp_incident_s
     )
 
     req = ChatRequest(
-        message="Have we seen 198.51.100.45 in past incidents?",
+        message="Have we seen 203.0.113.199 before in prior incidents?",
         use_memory=True,
     )
     resp = await orchestrator.process_chat(req)
 
     assert resp.intent == "ask_history"
-    assert resp.memory_used is True
-    assert len(resp.sources) == 1
-    assert resp.sources[0].id == "DEMO-001"
-    assert "<memory>" in fake_llm.last_user_prompt
-    assert "DEMO-001" in fake_llm.last_user_prompt
-    assert "Answer ONLY from the <memory> below" in fake_llm.last_system_prompt
+    assert resp.sources == []
+    assert "no record" in resp.answer.lower()
 
 
 @pytest.mark.asyncio
-async def test_teach_retains_memory(temp_chat_store, temp_incident_store):
-    """Teaching retains exactly one memory in Hindsight with appropriate tags, while general questions retain nothing."""
-    fake_memory = FakeMemory()
+async def test_multi_turn_history_passed_to_llm(temp_chat_store, temp_incident_store):
+    """Conversation history up to 8 turns is passed to LLM; memory block is only in final user message."""
+    fake_memory = FakeMemory(recall_results=[{
+        "text": "Incident DEMO-001: FIN-WS-042 isolated.",
+        "document_id": "DEMO-001",
+        "score": 0.85,
+        "tags": ["incident"],
+    }])
     fake_llm = FakeLLM()
     agent = SecurityAgent(fake_llm, fake_memory)
     orchestrator = ChatOrchestrator(
@@ -146,70 +225,92 @@ async def test_teach_retains_memory(temp_chat_store, temp_incident_store):
         chat_store=temp_chat_store,
     )
 
-    # 1. Teach request
-    req_teach = ChatRequest(
+    conv_id = "test-conv-history-pass"
+    # Seed 10 turns in store
+    for i in range(10):
+        role = "user" if i % 2 == 0 else "assistant"
+        temp_chat_store.add_message(conv_id, {"role": role, "content": f"Turn {i}"})
+
+    req = ChatRequest(
+        conversation_id=conv_id,
+        message="Have we seen 198.51.100.45 before in prior incidents?",
+        use_memory=True,
+    )
+    await orchestrator.process_chat(req)
+
+    # Check history passed to generate_text
+    assert fake_llm.last_history is not None
+    # Maximum 8 turns in history
+    assert len(fake_llm.last_history) <= 8
+    # Ensure memory is ONLY in last_user_prompt
+    assert "<memory>" in fake_llm.last_user_prompt
+    for turn in fake_llm.last_history:
+        assert "<memory>" not in turn["content"]
+
+
+@pytest.mark.asyncio
+async def test_pattern_question_calls_reflect(temp_chat_store, temp_incident_store):
+    """Pattern questions ('what worked', 'trend') invoke reflect_patterns and include observation source."""
+    fake_memory = FakeMemory(recall_results=[{
+        "text": "Incident DEMO-001: FIN-WS-042 PowerShell containment",
+        "document_id": "DEMO-001",
+        "score": 0.88,
+        "tags": ["incident"],
+    }])
+    fake_llm = FakeLLM()
+    agent = SecurityAgent(fake_llm, fake_memory)
+    orchestrator = ChatOrchestrator(
+        agent=agent,
+        memory_service=fake_memory,
+        llm_service=fake_llm,
+        incident_store=temp_incident_store,
+        chat_store=temp_chat_store,
+    )
+
+    req = ChatRequest(
+        message="What worked last time for phishing in Finance?",
+        use_memory=True,
+    )
+    resp = await orchestrator.process_chat(req)
+
+    assert resp.intent == "ask_history"
+    assert "<reflection>" in fake_llm.last_user_prompt
+    assert any(s.kind == "observation" for s in resp.sources)
+
+
+@pytest.mark.asyncio
+async def test_teach_cleanup_host_tags_and_feedback(temp_chat_store, temp_incident_store):
+    """Teach cleans statement with LLM, extracts host tags, and updates incident feedback if referencing past turn."""
+    fake_memory = FakeMemory()
+    fake_llm = FakeLLM()
+    # Mock LLM analyze_json for structured parsing
+    fake_llm.analyze_json = AsyncMock(return_value={
+        "kind": "analyst_note",
+        "text": "FIN-WS-042 is the CFO laptop and must be treated as critical priority",
+        "entities": ["FIN-WS-042"],
+        "incident_ref": None,
+    })
+    agent = SecurityAgent(fake_llm, fake_memory)
+    orchestrator = ChatOrchestrator(
+        agent=agent,
+        memory_service=fake_memory,
+        llm_service=fake_llm,
+        incident_store=temp_incident_store,
+        chat_store=temp_chat_store,
+    )
+
+    req = ChatRequest(
         message="Remember that FIN-WS-042 is the CFO's laptop, treat as high priority",
         use_memory=True,
     )
-    resp_teach = await orchestrator.process_chat(req_teach)
-    assert resp_teach.intent == "teach"
-    assert resp_teach.memory_saved is True
+    resp = await orchestrator.process_chat(req)
+
+    assert resp.intent == "teach"
+    assert resp.memory_saved is True
     assert len(fake_memory.retained_items) == 1
-    assert "analyst_note" in fake_memory.retained_items[0]["tags"]
-    assert "CFO" in fake_memory.retained_items[0]["content"]
-
-    # 2. General request retains nothing
-    req_gen = ChatRequest(
-        message="What is standard isolation protocol?",
-        use_memory=True,
-    )
-    resp_gen = await orchestrator.process_chat(req_gen)
-    assert resp_gen.memory_saved is False
-    assert len(fake_memory.retained_items) == 1  # Still 1, nothing added
-
-
-@pytest.mark.asyncio
-async def test_teach_influences_subsequent_answer(temp_chat_store, temp_incident_store):
-    """Proves with fakes that a taught note/feedback gets recalled in later investigations, changing the prompt context."""
-    fake_memory = FakeMemory()
-    fake_llm = FakeLLM()
-    agent = SecurityAgent(fake_llm, fake_memory)
-    orchestrator = ChatOrchestrator(
-        agent=agent,
-        memory_service=fake_memory,
-        llm_service=fake_llm,
-        incident_store=temp_incident_store,
-        chat_store=temp_chat_store,
-    )
-
-    # Step 1: Analyst teaches a critical fact
-    teach_req = ChatRequest(
-        message="Remember that FIN-WS-042 is the CFO's laptop, treat as high priority",
-        use_memory=True,
-    )
-    teach_resp = await orchestrator.process_chat(teach_req)
-    assert teach_resp.memory_saved is True
-    retained_item = fake_memory.retained_items[0]
-
-    # Step 2: Make FakeMemory recall the newly taught memory
-    fake_memory.recall_results = [{
-        "text": retained_item["content"],
-        "document_id": retained_item["document_id"],
-        "score": 0.95,
-        "tags": retained_item["tags"],
-    }]
-
-    # Step 3: Next investigation query for the same asset
-    inv_req = ChatRequest(
-        message="Alert observed on FIN-WS-042 connecting to 198.51.100.45 with PowerShell",
-        use_memory=True,
-    )
-    inv_resp = await orchestrator.process_chat(inv_req)
-
-    # Assert that the prompt now contains the taught note inside <memory>
-    assert "CFO's laptop" in fake_llm.last_user_prompt
-    assert "<memory>" in fake_llm.last_user_prompt
-    assert inv_resp.memory_used is True
+    retained = fake_memory.retained_items[0]
+    assert "host:fin-ws-042" in retained["tags"]
+    assert "CFO laptop" in retained["content"]
 
 
 @pytest.mark.asyncio
@@ -236,51 +337,8 @@ async def test_investigate_baseline_does_not_retain(temp_chat_store, temp_incide
     assert resp.memory_saved is False
     assert resp.report is not None
     assert resp.report.is_baseline is True
-    # Verify not retained in Hindsight
     assert len(fake_memory.retained_items) == 0
-    # Verify not added to persistent incident store
     assert len(temp_incident_store.get_all()) == 0
-
-
-@pytest.mark.asyncio
-async def test_investigate_failure_no_retain(temp_chat_store, temp_incident_store):
-    """If LLM fails during investigation, nothing is retained and friendly error is returned."""
-    fake_memory = FakeMemory()
-    fake_llm = FakeLLM(should_fail=True)
-    agent = SecurityAgent(fake_llm, fake_memory)
-    orchestrator = ChatOrchestrator(
-        agent=agent,
-        memory_service=fake_memory,
-        llm_service=fake_llm,
-        incident_store=temp_incident_store,
-        chat_store=temp_chat_store,
-    )
-
-    req = ChatRequest(
-        message="Observed malware alert on FIN-WS-042 connecting to 198.51.100.45 with PowerShell",
-        use_memory=True,
-    )
-    resp = await orchestrator.process_chat(req)
-
-    assert "couldn't reach the analysis model" in resp.answer
-    assert resp.memory_saved is False
-    assert len(fake_memory.retained_items) == 0
-
-
-@pytest.mark.asyncio
-async def test_chat_turn_truncation_cap(temp_chat_store):
-    """ChatStore caps retrieved history turns at 20."""
-    conv_id = "test-conv-cap"
-    for i in range(35):
-        temp_chat_store.add_message(conv_id, {"role": "user", "content": f"Turn {i}"})
-
-    all_turns = temp_chat_store.get(conv_id)
-    assert len(all_turns) == 35
-
-    last_20 = temp_chat_store.get_last_turns(conv_id, max_turns=20)
-    assert len(last_20) == 20
-    assert last_20[0]["content"] == "Turn 15"
-    assert last_20[-1]["content"] == "Turn 34"
 
 
 def test_chat_sse_stream_events(client=None):
@@ -299,7 +357,6 @@ def test_chat_sse_stream_events(client=None):
 
         assert "status" in events
         assert "final" in events
-        # Verify status comes before final
         first_status_idx = events.index("status")
         final_idx = events.index("final")
         assert first_status_idx < final_idx

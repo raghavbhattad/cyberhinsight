@@ -88,3 +88,16 @@ async def get_playbook(category: str, request: Request):
 
     _playbook_cache[category] = (now, reflection)
     return {"category": category, "playbook": reflection, "cached": False}
+
+
+@router.get("/status/{doc_id}")
+async def get_memory_indexing_status(doc_id: str, request: Request):
+    """Check indexing status of an incident / document in Hindsight memory."""
+    memory_service = request.app.state.memory_service
+    incident_store = request.app.state.incident_store
+    status = memory_service.get_indexing_status(doc_id)
+    if status is None:
+        inc = incident_store.get_by_id(doc_id)
+        if inc:
+            status = inc.get("memory_indexed")
+    return {"document_id": doc_id, "indexed": bool(status)}

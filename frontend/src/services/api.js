@@ -85,6 +85,7 @@ export const streamChat = async (message, conversationId = null, useMemory = tru
             if (eventType === 'status' && onStatus) onStatus(data.status);
             else if (eventType === 'token' && onToken) onToken(data.token);
             else if (eventType === 'final' && onFinal) onFinal(data);
+            else if (eventType === 'error' && onError) onError(new Error(data.message || 'Stream processing error'));
           } catch (pe) {
             console.error('Failed to parse SSE payload:', pe, dataStr);
           }
@@ -118,6 +119,7 @@ export const searchMemory = (query) => api.post('/memory/search', { query });
 export const getMemoryStats = () => api.get('/memory/stats');
 export const reflectMemory = (query) => api.post('/memory/reflect', { query });
 export const getPlaybook = (category) => api.get(`/memory/playbook?category=${encodeURIComponent(category)}`);
+export const getMemoryIndexingStatus = (docId) => api.get(`/memory/status/${docId}`);
 
 // SIEM ingestion
 export const ingestAlert = (alert) => api.post('/ingest/alert', alert);

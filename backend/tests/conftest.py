@@ -36,18 +36,20 @@ class FakeLLM:
             raise LLMError("Simulated LLM rate limit or parsing failure")
         return dict(self.response)
 
-    async def generate_text(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
+    async def generate_text(self, system_prompt: str, user_prompt: str, temperature: float = 0.3, history: list[dict] | None = None) -> str:
         self.call_count += 1
         self.last_system_prompt = system_prompt
         self.last_user_prompt = user_prompt
+        self.last_history = history
         if self.should_fail:
             raise LLMError("Simulated LLM text failure")
         return "Based on organizational memory, past incident DEMO-001 showed that isolating FIN-WS-042 stopped the PowerShell beacon."
 
-    async def stream_text(self, system_prompt: str, user_prompt: str, temperature: float = 0.3):
+    async def stream_text(self, system_prompt: str, user_prompt: str, temperature: float = 0.3, history: list[dict] | None = None):
         self.call_count += 1
         self.last_system_prompt = system_prompt
         self.last_user_prompt = user_prompt
+        self.last_history = history
         if self.should_fail:
             yield "LLM communication failure"
             return
@@ -68,6 +70,16 @@ class FakeMemory:
         self.recall_results = recall_results or []
         self.retained_items: list[dict] = []
         self.recall_call_count = 0
+        self._indexing_status: dict[str, bool] = {}
+
+    def get_indexing_status(self, doc_id: str) -> bool | None:
+        return self._indexing_status.get(doc_id)
+
+    def set_indexing_status(self, doc_id: str, status: bool) -> None:
+        self._indexing_status[doc_id] = status
+
+    async def wait_for_memory(self, query_token: str, timeout_s: float = 10.0, interval_s: float = 1.0) -> bool:
+        return True
 
     async def retain_incident(
         self,

@@ -151,6 +151,7 @@ class InvestigationResponse(BaseModel):
     memory_matches: list[MemoryMatch] = []
     recommendations: Recommendations
     memory_stored: bool
+    memory_indexed: bool | None = None
     is_baseline: bool = False
     campaign_link: CampaignLink | None = None
     predicted_escalation: EscalationPrediction | None = None
@@ -278,6 +279,7 @@ class ChatMessage(BaseModel):
     sources: list[ChatSource] = []
     intent: str | None = None
     report: InvestigationResponse | None = None
+    memory_indexed: bool | None = None
 
 
 class ChatRequest(BaseModel):
@@ -294,6 +296,7 @@ class ChatResponse(BaseModel):
     report: InvestigationResponse | None = None
     memory_used: bool
     memory_saved: bool
+    memory_indexed: bool | None = None
     suggestions: list[str] = []
 
 

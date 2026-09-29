@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     APP_API_KEY: str = ""
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     MAX_INCIDENT_CHARS: int = 8000
+    MIN_RECALL_SCORE: float = 0.15
 
     @property
     def cors_origin_list(self) -> list[str]:

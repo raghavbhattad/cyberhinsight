@@ -98,22 +98,42 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ## 🎬 60-Second Demo Walkthrough
 
-Try the core learning loop right in the chat interface:
+Experience the core intelligence loop in 4 quick turns:
 
-1. **Act 1: First Phishing Incident (Memory Off)**
-   - Toggle **Memory: Off** in the composer.
-   - Send: `"Finance user opened invoice_7482.docm and PowerShell executed on FIN-WS-042 connecting to 198.51.100.45"`
-   - Result: Standard generic containment advice. No past memory is recalled or saved (`is_baseline: true`).
-2. **Act 2: Similar Incident (Memory On)**
-   - Toggle **Memory: On**.
-   - Send: `"Another Finance endpoint FIN-WS-067 observed PowerShell executing and beaconing to 198.51.100.45"`
-   - Result: The assistant recalls the earlier incident, highlights the shared C2 IP `198.51.100.45`, links the campaign across Finance endpoints, and suggests containment based on organizational history.
-3. **Act 3: Grounded History Inquiry**
-   - Ask: `"What worked last time for phishing in Finance?"` or `"Have we seen 198.51.100.45 before?"`
-   - Result: Answer is synthesized strictly from recalled memories. Click **Used N memories** to inspect the real Hindsight document IDs, text snippets, and relevance scores.
-4. **Act 4: Teaching Feedback**
-   - Send: `"Remember that FIN-WS-042 is the CFO's laptop, treat as high priority"`
-   - Result: The assistant confirms and retains the note into Hindsight. Subsequent investigations for that host reflect this context.
+1. **Turn 1: Incident Investigation**
+   - **User sends**: `"Finance user opened invoice_7482.docm, PowerShell beaconed to 198.51.100.45 on FIN-WS-042"`
+   - **Assistant outputs**: A concise conversational briefing and an expandable report card.
+   - **Memory action**: Extracts IOCs (`198.51.100.45`, `invoice_7482.docm`, `FIN-WS-042`), queries Hindsight, detects any active campaigns, and asynchronously indexes the investigation into Hindsight. A status chip displays `Indexing memory…` transitioning to `Memory indexed ✓`.
+
+2. **Turn 2: Grounded Historical Inquiry (Immediate Follow-Up)**
+   - **User sends**: `"Have we seen 198.51.100.45 before in prior incidents?"`
+   - **Assistant outputs**: Answers strictly grounded in memory—citing Turn 1's incident and any historical matches, with zero hallucination.
+   - **Memory action**: Uses two-prong recall (indicator-focused + semantic), pronoun resolution ("that host"), and seamless local store fallback if remote vector indexing is still finalizing. Click **Used N memories** to inspect document IDs, relevance scores, and snippets.
+
+3. **Turn 3: Pattern Synthesis & What Worked**
+   - **User sends**: `"What worked last time for phishing in Finance?"`
+   - **Assistant outputs**: Synthesizes effective remediation strategies with specific citations of past actions and outcomes.
+   - **Memory action**: Calls Hindsight `areflect` (with 60-second caching) to extract macro patterns across past incidents and analyst feedback, surfaced as an `observation` source.
+
+4. **Turn 4: Teaching Organizational Facts & Feedback**
+   - **User sends**: `"Remember that FIN-WS-042 is the CFO's laptop, treat as high priority"`
+   - **Assistant outputs**: Confirms the note has been cataloged into organizational memory.
+   - **Memory action**: LLM cleans and extracts entity tags (`host:fin-ws-042`) and retains into Hindsight. Any subsequent alert targeting `FIN-WS-042` recalls this fact and escalates severity accordingly.
+
+---
+
+## 📸 Interface Verification & Screenshots Checklist
+
+When running the application locally (`npm run dev` + `uvicorn app.main:app`), evaluators can verify each key product state:
+
+| Screen State | How to View / Trigger | Key Visual Elements |
+|---|---|---|
+| **1. Chat Home (Empty State)** | Open `http://localhost:5173` | Clean dark theme, brand header, starter scenario chips, memory toggle, active status pill |
+| **2. Investigation & Indexing** | Click "Phishing + PowerShell" prompt | Conversational summary, `Indexing memory…` chip → `Memory indexed ✓`, collapsed report button |
+| **3. Full Incident Dossier** | Click **"View full report"** | Severity badge, MITRE technique card, IOC tags, root cause, campaign link (`CMP-...`), immediate actions |
+| **4. Grounded History & Sources** | Ask `"Have we seen 198.51.100.45 before?"` | Direct factual answer, **"Used N memories"** pill, drawer with document IDs, match percentages, and text snippets |
+| **5. Pattern Reflection** | Ask `"What worked last time for phishing?"` | Plain-English organizational insights, `observation` source chip from Hindsight `areflect()` |
+| **6. Memory Bank & Playbook** | Click **"Hindsight Memory"** in sidebar | Searchable memory bank, live vector status, category playbooks synthesized with evidence |
 
 ---
 
@@ -134,6 +154,7 @@ Try the core learning loop right in the chat interface:
 | `POST` | `/api/incidents/investigate` | Full pipeline investigation (triage, IOC extraction, campaign linking) |
 | `POST` | `/api/incidents/{id}/feedback` | Record containment feedback (effective/ineffective) to Hindsight |
 | `GET` | `/api/incidents/history` | Auditable history of past investigated incidents |
+| `GET` | `/api/memory/status/{doc_id}` | Polling endpoint for real-time document indexing status |
 | `GET` | `/api/memory/playbook` | Synthesized organizational playbook from Hindsight `areflect()` |
 | `POST` | `/api/memory/search` | Direct semantic search across the Hindsight memory bank |
 | `POST` | `/api/demo/new-session` | Initialize a fresh memory bank session for isolated testing |
@@ -141,18 +162,22 @@ Try the core learning loop right in the chat interface:
 
 ---
 
-## 🧪 Running Tests
+## 🧪 Running Tests & Local State Reset
 
 All unit tests run completely offline using fakes and mocks (no live API keys or external network calls required):
 
 ```bash
-# Run backend test suite
+# Run backend test suite (all 28 tests offline)
 cd backend
-pytest -q tests
+.venv\Scripts\python -m pytest -q tests
 
 # Run frontend build check
 cd ../frontend
 npm run build
+
+# Reset local state between demo runs
+cd ..
+python scripts/reset_local_state.py
 ```
 
 ---
@@ -162,7 +187,9 @@ npm run build
 * **Defensive Purpose Only**: CyberHinsight is designed exclusively for SOC defense, triage, containment analysis, and historical inquiry. It does not generate exploits or offensive malware.
 * **Synthetic Test Telemetry**: Incident demonstrations use synthetic IP addresses strictly within RFC 5737 test ranges (`198.51.100.0/24`, `203.0.113.0/24`) and private RFC 1918 networks.
 * **Strict Grounding Boundaries**: Historical Q&A is strictly bound by recalled memories. If an incident or host is not in memory, the assistant explicitly states it has no record of it.
-* **Context Truncation**: Chat history sent to LLM prompts is capped at the last 20 turns to prevent context exhaustion.
+* **Relevance Score Floor**: Memories recalled from Hindsight are filtered through a `MIN_RECALL_SCORE=0.15` floor to eliminate low-confidence vector noise before LLM prompting.
+* **Asynchronous Indexing Latency**: Remote vector ingestion in Hindsight Cloud typically requires 1–3 seconds to index. CyberHinsight handles this transparently through client-side indexing indicators (`Memory indexed ✓`) and an honest in-memory local incident log fallback to ensure immediate follow-up queries never produce false negatives.
+* **Context Window Budget**: Multi-turn chat history passed to inference models is bounded to the 8 most recent conversation turns with memory blocks restricted to the final prompt turn to avoid token bloat.
 
 ---
 

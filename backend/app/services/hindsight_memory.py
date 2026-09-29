@@ -36,6 +36,7 @@ class HindsightMemoryService:
         self._client = None
         self._loop = None
         self._mission_set = False
+        self._indexing_status: dict[str, bool] = {}
         if not api_key:
             logger.warning("HINDSIGHT_API_KEY not set. Memory features disabled.")
 
@@ -201,6 +202,14 @@ class HindsightMemoryService:
             logger.debug("Hindsight check_connection error: %s: %s", type(e).__name__, e)
             return False
 
+    def get_indexing_status(self, doc_id: str) -> bool | None:
+        """Get indexing status for a document/incident ID."""
+        return self._indexing_status.get(doc_id)
+
+    def set_indexing_status(self, doc_id: str, status: bool) -> None:
+        """Set indexing status for a document/incident ID."""
+        self._indexing_status[doc_id] = status
+
     async def wait_for_memory(
         self, query_token: str, timeout_s: float = 10.0, interval_s: float = 1.0
     ) -> bool:
@@ -212,7 +221,10 @@ class HindsightMemoryService:
             try:
                 results = await self.recall_similar(query_token, limit=3)
                 for r in results:
-                    if query_token.lower() in r.get("text", "").lower():
+                    text = r.get("text", "").lower()
+                    doc_id = str(r.get("document_id", "")).lower()
+                    token = query_token.lower()
+                    if token in text or token == doc_id:
                         return True
             except Exception:
                 pass
