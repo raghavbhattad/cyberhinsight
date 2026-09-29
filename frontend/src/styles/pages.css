@@ -1,0 +1,331 @@
+/* ==========================================================================
+   CYBERHINSIGHT SOC PAGES CSS
+   ========================================================================== */
+
+/* Dashboard Layout */
+.dashboard-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.dashboard-hero {
+  background: linear-gradient(135deg, rgba(14, 21, 38, 0.9) 0%, rgba(8, 13, 24, 0.95) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--accent-cyan), var(--accent-blue));
+  box-shadow: 0 0 16px var(--accent-cyan);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Memory Intelligence Pipeline Section */
+.pipeline-section {
+  background: linear-gradient(145deg, rgba(14, 21, 38, 0.9) 0%, rgba(6, 10, 18, 0.98) 100%);
+  border: 1px solid rgba(0, 240, 255, 0.25);
+  border-radius: var(--radius-xl);
+  padding: 1.75rem 2rem;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7), inset 0 0 20px rgba(0, 240, 255, 0.03);
+  position: relative;
+}
+
+.pipeline-flow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
+}
+
+.pipeline-node {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 170px;
+  flex: 1;
+  position: relative;
+  transition: all var(--transition-fast);
+}
+
+.pipeline-node:hover {
+  border-color: var(--accent-cyan);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 240, 255, 0.15);
+}
+
+.pipeline-node.active {
+  border-color: var(--accent-cyan);
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.1) 0%, rgba(14, 21, 38, 0.95) 100%);
+  box-shadow: 0 0 16px rgba(0, 240, 255, 0.2);
+}
+
+.node-step {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.node-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.node-desc {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.pipeline-arrow {
+  color: var(--text-muted);
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+/* Investigate Page */
+.investigate-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Multi-step Investigation Progression Indicator */
+.stepper-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1rem 1.5rem;
+  overflow-x: auto;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.step-item.active {
+  color: var(--accent-cyan);
+  font-weight: 700;
+}
+
+.step-item.completed {
+  color: var(--accent-emerald);
+}
+
+.step-number {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  font-size: 0.7rem;
+}
+
+.step-item.active .step-number {
+  background: rgba(0, 240, 255, 0.2);
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.5);
+}
+
+.step-arrow {
+  color: var(--border-light);
+  font-size: 0.8rem;
+}
+
+/* Sample Scenarios Bar */
+.scenario-selector {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.scenario-btn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.scenario-btn:hover {
+  background: rgba(0, 240, 255, 0.08);
+  border-color: var(--accent-cyan);
+  color: #fff;
+}
+
+/* Results Grid */
+.results-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 1024px) {
+  .results-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Memory Bank Intelligence Grid */
+.memory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 1.25rem;
+}
+
+/* Tactical Alert Row (for History & Dashboard) */
+.alert-row {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.alert-row:hover {
+  border-color: rgba(56, 189, 248, 0.3);
+  transform: translateX(3px);
+  background: var(--bg-card-hover);
+}
+
+/* Architecture Schematic */
+.architecture-page {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.arch-canvas {
+  background: radial-gradient(circle at center, rgba(14, 21, 38, 0.95) 0%, rgba(6, 9, 17, 0.98) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  padding: 3rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.arch-tier {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.arch-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  position: relative;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  transition: all var(--transition-normal);
+}
+
+.arch-block:hover {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 12px 32px rgba(0, 240, 255, 0.2);
+  transform: translateY(-3px);
+}
+
+.arch-block.highlight {
+  border-color: var(--accent-cyan);
+  background: linear-gradient(135deg, rgba(0, 240, 255, 0.1) 0%, rgba(14, 21, 38, 0.95) 100%);
+  box-shadow: 0 0 24px rgba(0, 240, 255, 0.25);
+}
+
+.arch-badge {
+  font-size: 0.65rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--accent-cyan);
+}
+
+.arch-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.arch-desc {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.arch-connector-down {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: var(--accent-cyan);
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+}
+
+.arch-line-vertical {
+  width: 2px;
+  height: 36px;
+  background: linear-gradient(180deg, var(--accent-cyan), rgba(0, 240, 255, 0.2));
+  box-shadow: 0 0 8px var(--accent-cyan);
+}
