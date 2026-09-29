@@ -10,7 +10,7 @@
 > *"CyberHinsight elevates defensive incident response from stateless, generic LLM playbooks into an autonomous SOC agent that links multi-week campaigns across endpoints and measurably improves by learning from investigation outcomes."*
 
 ### The Problem in Concrete Numbers:
-- SOC analysts face **thousands of alerts daily**, yet **over 70% of incidents are repeat variations** of known campaigns (same adversary infrastructure, same phishing templates, same target subnets).
+- SOC analysts face **thousands of alerts daily**, and recurring incidents frequently share known adversary infrastructure (same attacker subnets, phishing templates, and target departments).
 - Traditional LLM agents suffer from **organizational amnesia**: each investigation begins from scratch. They cannot distinguish between containment actions that succeeded in your specific environment versus those that caused operational outages or allowed malware persistence.
 - Standard RAG approaches merely index tickets without understanding **outcomes**—storing mistakes alongside successes.
 

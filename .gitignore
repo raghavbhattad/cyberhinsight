@@ -48,3 +48,7 @@ npm-debug.log*
 backend/*.db
 backend/*.sqlite
 backend/incident_store.json
+backend/conversations.json
+incident_store.json
+conversations.json
+*.tmp

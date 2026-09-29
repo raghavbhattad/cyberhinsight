@@ -28,12 +28,13 @@ def calculate_specificity_score(
     incident_iocs: list[str],
     campaign_id: str | None,
     feedback_history: list[dict],
+    shared_iocs: list[str] | None = None,
 ) -> dict:
     """Calculate a transparent, documented specificity score.
     Components:
     - org_references: count of org-specific hostnames, incident IDs, or department names cited
     - ioc_references: count of specific IOCs (IPs, hashes, filenames) cited in actions/why
-    - campaign_awareness: 1 if campaign ID or shared infrastructure is cited, else 0
+    - campaign_awareness: 1 if actual campaign_id or shared infrastructure IOC is cited, else 0
     - ineffective_action_avoidance: 1 if known-ineffective actions from past feedback were avoided, else 0
     Total score: sum of components normalized to 0-10 scale.
     """
@@ -51,8 +52,15 @@ def calculate_specificity_score(
         if ioc.lower() in full_text.lower():
             ioc_ref_count += 1
 
-    # 3. Campaign awareness
-    campaign_aware = 1 if (campaign_id and campaign_id.lower() in full_text.lower()) or "campaign" in full_text.lower() else 0
+    # 3. Campaign awareness: requires actual campaign_id or a shared IOC to be cited (not just the generic word "campaign")
+    campaign_aware = 0
+    if campaign_id and campaign_id.lower() in full_text.lower():
+        campaign_aware = 1
+    elif shared_iocs:
+        for sioc in shared_iocs:
+            if sioc.lower() in full_text.lower():
+                campaign_aware = 1
+                break
 
     # 4. Ineffective action avoidance
     ineffective_actions = []
@@ -124,7 +132,10 @@ async def run_learning_sequence(
     _auth=Depends(verify_api_key),
 ):
     """Run N scripted, related incidents in TWO modes: memory OFF and memory ON.
-    Computes transparent specificity scores for the learning curve."""
+    Computes transparent specificity scores for the learning curve.
+    Starts with a fresh isolated session to ensure true cold-start measurement."""
+    # Reset to fresh demo session for deterministic cold-start
+    await start_new_session(request)
     agent = request.app.state.agent
     memory_service = request.app.state.memory_service
     incident_store = request.app.state.incident_store
@@ -246,12 +257,14 @@ async def run_learning_sequence(
         incident_store.add(mem_res)
 
         campaign_id = mem_res.get("campaign_link", {}).get("campaign_id") if mem_res.get("campaign_link") else None
+        shared_iocs = mem_res.get("campaign_link", {}).get("shared_iocs") if mem_res.get("campaign_link") else None
         mem_score = calculate_specificity_score(
             mem_res["recommendations"],
             mem_res["recommendations"].get("why_these_recommendations", ""),
             iocs,
             campaign_id,
             feedback_history,
+            shared_iocs=shared_iocs,
         )
 
         # Submit scripted feedback to train Hindsight
@@ -274,6 +287,9 @@ async def run_learning_sequence(
             document_id=f"{inc_id}-outcome",
             tags=["outcome", f"outcome:{fb['outcome']}"],
         )
+
+        # Wait for memory index to reflect retained facts before next step
+        await memory_service.wait_for_memory(query_token=inc_id[:8], timeout_s=4.0)
 
         results.append({
             "step": step,

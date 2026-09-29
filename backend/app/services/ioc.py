@@ -117,3 +117,84 @@ def merge_iocs(extracted: ExtractedIOCs, llm_indicators: list[str]) -> list[str]
             seen.add(normalized)
             merged.append(normalized)
     return merged
+
+
+import ipaddress
+
+_INTERNAL_NETWORKS = [
+    ipaddress.ip_network('10.0.0.0/8'),
+    ipaddress.ip_network('172.16.0.0/12'),
+    ipaddress.ip_network('192.168.0.0/16'),
+    ipaddress.ip_network('127.0.0.0/8'),
+    ipaddress.ip_network('169.254.0.0/16'),
+    ipaddress.ip_network('0.0.0.0/8'),
+]
+
+def is_private_ip(ip_str: str) -> bool:
+    """Return True if an IP is in RFC 1918 private, loopback, or link-local ranges.
+    Preserves synthetic public testing ranges (RFC 5737 198.51.100.x, 203.0.113.x)."""
+    try:
+        clean = ip_str.split('/')[0].strip()
+        addr = ipaddress.ip_address(clean)
+        return any(addr in net for net in _INTERNAL_NETWORKS)
+    except ValueError:
+        return False
+
+
+_DEPT_PREFIX_MAP = {
+    "FIN-": "Finance",
+    "HR-": "HR",
+    "ENG-": "Engineering",
+    "EXEC-": "Executive",
+    "IT-": "IT",
+    "INF-": "IT Infrastructure",
+    "LEG-": "Legal",
+    "PRO-": "Procurement",
+    "MKT-": "Marketing",
+    "RD-": "R&D",
+    "SEC-": "Security",
+    "DEV-": "DevOps",
+    "VPN-": "Remote Workers",
+}
+
+_DEPT_KEYWORDS = [
+    (re.compile(r'\bFinance\b', re.IGNORECASE), "Finance"),
+    (re.compile(r'\b(?:Human Resources|HR)\b', re.IGNORECASE), "HR"),
+    (re.compile(r'\bEngineering\b', re.IGNORECASE), "Engineering"),
+    (re.compile(r'\b(?:Executive|CEO|CFO|CIO|COO)\b', re.IGNORECASE), "Executive"),
+    (re.compile(r'\b(?:IT Infrastructure|Infrastructure)\b', re.IGNORECASE), "IT Infrastructure"),
+    (re.compile(r'\b(?:Information Technology|IT Support|IT Dept)\b', re.IGNORECASE), "IT"),
+    (re.compile(r'\bLegal\b', re.IGNORECASE), "Legal"),
+    (re.compile(r'\bProcurement\b', re.IGNORECASE), "Procurement"),
+    (re.compile(r'\bMarketing\b', re.IGNORECASE), "Marketing"),
+    (re.compile(r'\b(?:Research & Development|R&D)\b', re.IGNORECASE), "R&D"),
+    (re.compile(r'\b(?:Security|SOC|InfoSec)\b', re.IGNORECASE), "Security"),
+    (re.compile(r'\bDevOps\b', re.IGNORECASE), "DevOps"),
+    (re.compile(r'\b(?:Remote Worker|Remote Workers|VPN)\b', re.IGNORECASE), "Remote Workers"),
+]
+
+
+def extract_department(text: str, hostname: str | None = None) -> str:
+    """Deterministically determine department from host prefix or text keywords."""
+    # 1. Check text for hostnames like FIN-WS-042, HR-WS-012
+    host_match = _HOSTNAME.search(text)
+    if host_match:
+        found_host = host_match.group(0).upper()
+        for prefix, dept in _DEPT_PREFIX_MAP.items():
+            if found_host.startswith(prefix):
+                return dept
+
+    # 2. Check department keywords in text
+    for pattern, dept in _DEPT_KEYWORDS:
+        if pattern.search(text):
+            return dept
+
+    # 3. Check fallback hostname prefix if provided
+    if hostname:
+        upper_host = hostname.upper()
+        for prefix, dept in _DEPT_PREFIX_MAP.items():
+            if upper_host.startswith(prefix):
+                return dept
+
+    return "General"
+

@@ -9,7 +9,7 @@
 ## 🚨 The Problem in Numbers
 
 * **SOC Alert Fatigue**: Enterprise SOC teams triage over **10,000 security alerts weekly**, spending an average of **26 minutes per incident**.
-* **Organizational Amnesia**: Over **70% of security incidents are recurring variants** of prior campaigns (reused C2 IP ranges, macro droppers, credential harvesters). Yet traditional LLMs analyze each alert in total isolation with zero knowledge of past tickets.
+* **Organizational Amnesia**: Many recurring security incidents share underlying adversary infrastructure (reused C2 IP ranges, macro droppers, credential harvesters), yet traditional LLMs analyze each alert in total isolation with zero knowledge of past tickets.
 * **Flawed Generic Playbooks**: Generic AI assistants recommend cookie-cutter advice (e.g., "reset password") that fails in real environments where active session tokens must be revoked or where unisolated reboots allow malware persistence.
 
 ---

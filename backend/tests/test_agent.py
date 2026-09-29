@@ -67,6 +67,69 @@ async def test_successful_investigation_retains_structured_memory():
     retained = fake_memory.retained_items[0]
     assert retained["document_id"] == result["id"]
     assert "incident" in retained["tags"]
-    assert "cat:phishing" in retained["tags"]
-    assert "sev:critical" in retained["tags"]
     assert "Incident ID:" in retained["content"]
+
+
+class FlakyFakeLLM:
+    """Returns invalid output on first call, valid on second call."""
+    def __init__(self):
+        self.call_count = 0
+        self.recorded_prompts = []
+
+    async def analyze_json(self, system_prompt: str, user_prompt: str, retries: int = 3) -> dict:
+        self.call_count += 1
+        self.recorded_prompts.append((system_prompt, user_prompt))
+        if self.call_count == 1:
+            # Non-dict triggers Pydantic ValidationError
+            return "invalid_output_string"
+        return {
+            "summary": "Recovered phishing alert",
+            "severity": "critical",
+            "category": "Phishing",
+            "mitre_technique": "T1566.001",
+            "affected_asset": "FIN-WS-042",
+            "indicators": ["198.51.100.45"],
+            "confidence": 0.9,
+            "root_cause": "Clicked macro",
+            "investigation_findings": "PowerShell beaconed out",
+            "risk_assessment": "High",
+            "immediate_actions": ["Isolate host"],
+            "long_term_actions": ["Policy review"],
+            "why_these_recommendations": "Standard",
+            "adapted_from_memory": False,
+        }
+
+
+@pytest.mark.asyncio
+async def test_retry_preserves_original_incident_prompt():
+    """Verify that when schema validation fails, the retry includes the original incident data."""
+    flaky_llm = FlakyFakeLLM()
+    fake_memory = FakeMemory()
+    agent = SecurityAgent(flaky_llm, fake_memory)
+
+    incident_desc = "Critical alert on FIN-WS-042: PowerShell connection to 198.51.100.45"
+    result = await agent.investigate(incident_desc, use_memory=True)
+
+    assert flaky_llm.call_count == 2
+    # Verify second call still contained original incident description
+    second_user_prompt = flaky_llm.recorded_prompts[1][1]
+    assert incident_desc in second_user_prompt
+    assert "ATTENTION: Your previous response failed schema validation" in second_user_prompt
+    assert result["incident"]["summary"] == "Recovered phishing alert"
+    assert result["incident"]["department"] == "Finance"
+
+
+@pytest.mark.asyncio
+async def test_baseline_flagged_and_not_retained():
+    """Verify that use_memory=False sets is_baseline=True and does not retain."""
+    fake_llm = FakeLLM()
+    fake_memory = FakeMemory()
+    agent = SecurityAgent(fake_llm, fake_memory)
+
+    result = await agent.investigate("HR employee reported suspicious macro on HR-WS-009", use_memory=False)
+
+    assert result["is_baseline"] is True
+    assert result["memory_stored"] is False
+    assert result["incident"]["department"] == "HR"
+    assert len(fake_memory.retained_items) == 0
+

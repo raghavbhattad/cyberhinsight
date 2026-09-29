@@ -107,3 +107,35 @@ def test_escalation_prediction_grounded():
     assert "ransomware" in escalation["predicted_next_stage"].lower() or "encrypt" in escalation["predicted_next_stage"].lower()
     assert len(escalation["grounding_evidence"]) > 0
     assert escalation["preventive_action"] != ""
+
+
+def test_private_ips_ignored_for_campaigns():
+    """Private IPs (10.x, 192.168.x, 172.16.x) must NEVER link campaigns."""
+    from app.services.ioc import is_private_ip
+    assert is_private_ip("10.10.4.22") is True
+    assert is_private_ip("192.168.1.100") is True
+    assert is_private_ip("172.20.5.1") is True
+    assert is_private_ip("127.0.0.1") is True
+    # Synthetic attacker IP must be external
+    assert is_private_ip("198.51.100.45") is False
+
+    # Incident with only private IP matching
+    incident_iocs = extract_iocs("Internal workstation connecting to internal proxy at 10.10.4.22")
+    memory_matches = [{
+        "text": "Prior connection to internal server 10.10.4.22",
+        "document_id": "DEMO-001",
+    }]
+    link = link_campaign(incident_iocs, memory_matches, [], "current-id")
+    assert link is None, "Private IP triggered a false campaign link!"
+
+
+def test_deterministic_department_extraction():
+    """Verify department extraction from host prefix and text keywords."""
+    from app.services.ioc import extract_department
+
+    assert extract_department("Malware found on FIN-WS-042") == "Finance"
+    assert extract_department("Suspicious process on HR-WS-015") == "HR"
+    assert extract_department("Engineering user reported strange activity on ENG-WS-200") == "Engineering"
+    assert extract_department("Executive laptop EXEC-WS-001 compromised") == "Executive"
+    assert extract_department("Employee in Legal received unexpected attachment") == "Legal"
+

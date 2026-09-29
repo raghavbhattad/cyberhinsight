@@ -115,7 +115,7 @@ const Architecture = () => {
         </div>
       </div>
 
-      {/* The 3 Pillars of Hindsight (Hackathon Core Value) */}
+      {/* The 3 Pillars of Hindsight (Core Defensive Memory Architecture) */}
       <div>
         <h3 className="text-lg font-bold text-primary mb-4 flex items-center gap-2">
           <Brain size={20} className="text-cyan" />

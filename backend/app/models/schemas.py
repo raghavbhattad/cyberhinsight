@@ -14,6 +14,7 @@ class IncidentInfo(BaseModel):
     category: str
     mitre_technique: str
     affected_asset: str
+    department: str = ""
     indicators: list[str] = []
     confidence: float = 0.85
 
@@ -150,6 +151,7 @@ class InvestigationResponse(BaseModel):
     memory_matches: list[MemoryMatch] = []
     recommendations: Recommendations
     memory_stored: bool
+    is_baseline: bool = False
     campaign_link: CampaignLink | None = None
     predicted_escalation: EscalationPrediction | None = None
     iocs: dict | None = None

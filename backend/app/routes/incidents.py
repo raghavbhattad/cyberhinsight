@@ -53,6 +53,10 @@ async def investigate_incident(
         logger.error("Investigation error: %s: %s", type(e).__name__, e)
         raise HTTPException(status_code=502, detail=f"Investigation failed: {type(e).__name__}: {e}")
 
+    if not input.use_memory or result.get("is_baseline"):
+        result["is_baseline"] = True
+        return result
+
     incident_store.add(result)
     return result
 

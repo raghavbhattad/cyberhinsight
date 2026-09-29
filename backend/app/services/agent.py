@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from app.services.groq_llm import GroqLLMService, LLMError
 from app.services.hindsight_memory import HindsightMemoryService
-from app.services.ioc import extract_iocs, merge_iocs
+from app.services.ioc import extract_iocs, merge_iocs, extract_department
 from app.services.campaigns import link_campaign, predict_escalation
 from app.models.schemas import LLMAnalysis
 from app.prompts.system import ANALYSIS_SYSTEM_PROMPT, MEMORY_AWARE_PROMPT_TEMPLATE
@@ -34,12 +34,13 @@ class SecurityAgent:
         4. Call LLM with validation
         5. Campaign linking
         6. Escalation prediction
-        7. Retain in Hindsight (only if analysis validated)
+        7. Retain in Hindsight (only if analysis validated and not baseline)
         """
         incident_id = str(uuid.uuid4())
         ts = datetime.now(timezone.utc).isoformat()
         store_items = incident_store_items or []
         timings = {}
+        is_baseline = not use_memory
 
         # Strip control characters from input
         clean_desc = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f]', '', description)
@@ -86,11 +87,12 @@ class SecurityAgent:
         try:
             analysis = LLMAnalysis.model_validate(parsed)
         except ValidationError as ve:
-            # Retry once with error feedback
+            # Retry once with error feedback — preserve original prompt so incident is not dropped
             logger.warning("LLM output validation failed, retrying: %s", ve)
             retry_prompt = (
-                f"Your previous output failed validation: {ve}. "
-                f"Please return valid JSON matching the exact schema requested."
+                f"{user_prompt}\n\n"
+                f"ATTENTION: Your previous response failed schema validation: {ve}\n"
+                f"Please re-analyze the incident above and output valid JSON matching the exact schema."
             )
             parsed = await self.llm.analyze_json(system_prompt, retry_prompt)
             analysis = LLMAnalysis.model_validate(parsed)  # Let it raise if still bad
@@ -100,17 +102,21 @@ class SecurityAgent:
         # Merge IOCs (deterministic + LLM)
         merged_indicators = merge_iocs(incident_iocs, analysis.indicators)
 
-        # 5. Campaign linking
-        campaign_link = link_campaign(
-            incident_iocs, memory_matches, store_items, incident_id
-        )
+        # Determine department deterministically
+        department = extract_department(clean_desc, analysis.affected_asset)
 
-        # 6. Escalation prediction
-        predicted_escalation = predict_escalation(
-            campaign_link, memory_matches, store_items
-        )
+        # 5. Campaign linking & 6. Escalation prediction (only when memory is active)
+        campaign_link = None
+        predicted_escalation = None
+        if use_memory:
+            campaign_link = link_campaign(
+                incident_iocs, memory_matches, store_items, incident_id, current_text=clean_desc
+            )
+            predicted_escalation = predict_escalation(
+                campaign_link, memory_matches, store_items
+            )
 
-        # 7. Retain in Hindsight (only because analysis validated)
+        # 7. Retain in Hindsight (only because analysis validated and use_memory is True)
         memory_stored = False
         if use_memory:
             t0 = time.time()
@@ -176,6 +182,7 @@ class SecurityAgent:
                 "category": analysis.category,
                 "mitre_technique": analysis.mitre_technique,
                 "affected_asset": analysis.affected_asset,
+                "department": department,
                 "indicators": merged_indicators,
                 "confidence": analysis.confidence,
             },
@@ -192,6 +199,7 @@ class SecurityAgent:
                 "adapted_from_memory": analysis.adapted_from_memory,
             },
             "memory_stored": memory_stored,
+            "is_baseline": is_baseline,
             "campaign_link": campaign_link,
             "predicted_escalation": predicted_escalation,
             "iocs": incident_iocs.to_dict(),
