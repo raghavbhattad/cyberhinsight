@@ -14,6 +14,89 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Chat Endpoints
+export const sendChat = (message, conversationId = null, useMemory = true) =>
+  api.post('/chat', { message, conversation_id: conversationId, use_memory: useMemory });
+
+export const listConversations = () => api.get('/chat');
+export const getConversation = (id) => api.get(`/chat/${id}`);
+export const deleteConversation = (id) => api.delete(`/chat/${id}`);
+
+export const streamChat = async (message, conversationId = null, useMemory = true, callbacks = {}) => {
+  const { onStatus, onToken, onFinal, onError } = callbacks;
+  const apiKey = import.meta.env.VITE_API_KEY;
+  const headers = { 'Content-Type': 'application/json' };
+  if (apiKey) {
+    headers['X-API-Key'] = apiKey;
+  }
+
+  try {
+    const response = await fetch('/api/chat/stream', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        message,
+        conversation_id: conversationId,
+        use_memory: useMemory,
+      }),
+    });
+
+    if (!response.ok) {
+      let errorMsg = `Server error (${response.status})`;
+      try {
+        const errJson = await response.json();
+        errorMsg = errJson.detail || errorMsg;
+      } catch (e) {
+        const errTxt = await response.text();
+        if (errTxt) errorMsg = errTxt;
+      }
+      throw new Error(errorMsg);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      const parts = buffer.split('\n\n');
+      buffer = parts.pop(); // keep trailing incomplete block
+
+      for (const part of parts) {
+        if (!part.trim()) continue;
+        const lines = part.split('\n');
+        let eventType = 'message';
+        let dataStr = '';
+
+        for (const line of lines) {
+          if (line.startsWith('event:')) {
+            eventType = line.slice(6).trim();
+          } else if (line.startsWith('data:')) {
+            dataStr = line.slice(5).trim();
+          }
+        }
+
+        if (dataStr) {
+          try {
+            const data = JSON.parse(dataStr);
+            if (eventType === 'status' && onStatus) onStatus(data.status);
+            else if (eventType === 'token' && onToken) onToken(data.token);
+            else if (eventType === 'final' && onFinal) onFinal(data);
+          } catch (pe) {
+            console.error('Failed to parse SSE payload:', pe, dataStr);
+          }
+        }
+      }
+    }
+  } catch (err) {
+    if (onError) onError(err);
+    else throw err;
+  }
+};
+
 // Health & status
 export const healthCheck = () => api.get('/health');
 

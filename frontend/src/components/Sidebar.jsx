@@ -1,72 +1,170 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { 
   Shield, 
-  LayoutDashboard, 
-  Crosshair, 
+  Plus, 
+  Trash2, 
   Archive, 
   Brain, 
-  Network,
-  Activity,
-  TrendingUp
+  Info,
+  Sun,
+  Moon,
+  MessageSquare,
 } from 'lucide-react';
+import { listConversations, deleteConversation } from '../services/api';
 
-const Sidebar = () => {
-  const navItems = [
-    { path: '/', label: 'Overview & Metrics', index: '01', icon: LayoutDashboard },
-    { path: '/investigate', label: 'Live Investigation', index: '02', icon: Crosshair },
-    { path: '/learning', label: 'Agent Learning Curve', index: '03', icon: TrendingUp },
-    { path: '/history', label: 'Incident Archive', index: '04', icon: Archive },
-    { path: '/memory', label: 'Hindsight Memory Bank', index: '05', icon: Brain },
-    { path: '/architecture', label: 'Defense Architecture', index: '06', icon: Network },
-  ];
+export default function Sidebar({
+  activeConversationId,
+  onSelectConversation,
+  onNewChat,
+  refreshKey,
+}) {
+  const [conversations, setConversations] = useState([]);
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem('ch_theme') || 'light'
+  );
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('ch_theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  const fetchConversations = async () => {
+    try {
+      const res = await listConversations();
+      if (res.data) {
+        setConversations(res.data);
+      }
+    } catch (err) {
+      console.debug('Failed to load conversations list:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchConversations();
+  }, [refreshKey]);
+
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
+    try {
+      await deleteConversation(id);
+      setConversations((prev) => prev.filter((c) => c.id !== id));
+      if (activeConversationId === id) {
+        onNewChat();
+      }
+    } catch (err) {
+      console.error('Failed to delete conversation:', err);
+    }
+  };
 
   return (
     <aside className="sidebar">
       {/* Brand Header */}
-      <div className="sidebar-brand">
-        <div className="brand-icon-wrapper">
-          <Shield size={24} style={{ color: 'var(--accent-cyan)' }} />
+      <div className="sidebar-header">
+        <div className="sidebar-brand">
+          <div className="brand-icon">
+            <Shield size={22} />
+          </div>
+          <div>
+            <h1 className="brand-title">CyberHinsight</h1>
+            <p className="brand-subtitle">Defensive AI Security</p>
+          </div>
         </div>
-        <div>
-          <h1 className="brand-title">CYBERHINSIGHT</h1>
-          <p className="brand-subtitle">Autonomous SOC Intelligence</p>
-        </div>
+
+        {/* New Chat Button */}
+        <button
+          type="button"
+          className="btn-new-chat"
+          onClick={() => {
+            onNewChat();
+            navigate('/');
+          }}
+        >
+          <Plus size={16} />
+          <span>New conversation</span>
+        </button>
       </div>
 
-      {/* Navigation */}
-      <nav className="sidebar-nav">
-        {navItems.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
-          >
-            <item.icon size={18} />
-            <span style={{ flexGrow: 1 }}>{item.label}</span>
-            <span className="nav-index">{item.index}</span>
-          </NavLink>
-        ))}
+      {/* Conversations List */}
+      <nav className="conversations-nav" aria-label="Conversation history">
+        <div className="conversations-header">Recent Chats</div>
+        {conversations.length === 0 ? (
+          <div style={{ padding: '12px 10px', fontSize: '12px', color: 'var(--text-muted)' }}>
+            No recent conversations
+          </div>
+        ) : (
+          conversations.map((conv) => (
+            <button
+              key={conv.id}
+              type="button"
+              className={`conv-item ${activeConversationId === conv.id ? 'active' : ''}`}
+              onClick={() => {
+                onSelectConversation(conv.id);
+                navigate('/');
+              }}
+            >
+              <div className="flex items-center gap-2" style={{ minWidth: 0, flex: 1 }}>
+                <MessageSquare size={13} style={{ flexShrink: 0, opacity: 0.6 }} />
+                <span className="conv-title">{conv.title}</span>
+              </div>
+              <button
+                type="button"
+                className="conv-delete-btn"
+                title="Delete conversation"
+                onClick={(e) => handleDelete(e, conv.id)}
+              >
+                <Trash2 size={12} />
+              </button>
+            </button>
+          ))
+        )}
       </nav>
 
-      {/* Persistent Intelligence Widget */}
+      {/* Secondary Links Footer */}
       <div className="sidebar-footer">
-        <div className="memory-engine-badge">
-          <div className="engine-header">
-            <span>Memory Architecture</span>
-            <span className="pulse-dot cyan"></span>
-          </div>
-          <div className="engine-status">
-            <Brain size={14} />
-            <span>Hindsight Cloud</span>
-          </div>
-          <div className="text-xs text-muted font-mono" style={{ fontSize: '0.68rem' }}>
-            BANK: <span className="text-primary font-semibold">cyberhinsight</span>
-          </div>
+        <NavLink
+          to="/history"
+          className={({ isActive }) => `footer-nav-link ${isActive ? 'active' : ''}`}
+        >
+          <Archive size={15} />
+          <span>History</span>
+        </NavLink>
+
+        <NavLink
+          to="/memory"
+          className={({ isActive }) => `footer-nav-link ${isActive ? 'active' : ''}`}
+        >
+          <Brain size={15} />
+          <span>Memory</span>
+        </NavLink>
+
+        <NavLink
+          to="/about"
+          className={({ isActive }) => `footer-nav-link ${isActive ? 'active' : ''}`}
+        >
+          <Info size={15} />
+          <span>About</span>
+        </NavLink>
+
+        {/* Theme Toggle */}
+        <div className="theme-toggle-row">
+          <span>Theme</span>
+          <button
+            type="button"
+            className="btn-theme-toggle"
+            onClick={toggleTheme}
+            title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? <Sun size={13} /> : <Moon size={13} />}
+            <span>{theme === 'dark' ? 'Light' : 'Dark'}</span>
+          </button>
         </div>
       </div>
     </aside>
   );
-};
-
-export default Sidebar;
+}

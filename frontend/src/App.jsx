@@ -1,28 +1,47 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useOutletContext } from 'react-router-dom';
 import Layout from './components/Layout';
-import Dashboard from './pages/Dashboard';
-import Investigate from './pages/Investigate';
+import ChatPage from './pages/ChatPage';
 import History from './pages/History';
 import Memory from './pages/Memory';
-import Architecture from './pages/Architecture';
-import LearningCurve from './pages/LearningCurve';
+import About from './pages/About';
 
-function App() {
+function ChatPageWrapper() {
+  const { conversationId, setConversationId, onRefreshSidebar } = useOutletContext();
+  return (
+    <ChatPage
+      conversationId={conversationId}
+      onConversationCreated={(id) => {
+        setConversationId(id);
+        if (onRefreshSidebar) onRefreshSidebar();
+      }}
+      onRefreshSidebar={onRefreshSidebar}
+    />
+  );
+}
+
+export default function App() {
+  const [activeConversationId, setActiveConversationId] = useState(null);
+
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="investigate" element={<Investigate />} />
+        <Route
+          path="/"
+          element={
+            <Layout
+              activeConversationId={activeConversationId}
+              setActiveConversationId={setActiveConversationId}
+            />
+          }
+        >
+          <Route index element={<ChatPageWrapper />} />
           <Route path="history" element={<History />} />
           <Route path="memory" element={<Memory />} />
-          <Route path="learning" element={<LearningCurve />} />
-          <Route path="architecture" element={<Architecture />} />
+          <Route path="about" element={<About />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
   );
 }
-
-export default App;
