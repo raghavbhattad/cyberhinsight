@@ -8,7 +8,9 @@ from app.services.groq_llm import GroqLLMService
 from app.services.hindsight_memory import HindsightMemoryService
 from app.services.agent import SecurityAgent
 from app.services.incidents import IncidentStore
-from app.routes import health, incidents, memory, ingest, demo
+from app.services.chat_store import ChatStore
+from app.services.chat_orchestrator import ChatOrchestrator
+from app.routes import health, incidents, memory, ingest, demo, chat
 
 # Configure logging
 logging.basicConfig(
@@ -65,14 +67,25 @@ memory_service = HindsightMemoryService(
 )
 agent = SecurityAgent(groq_service, memory_service)
 incident_store = IncidentStore()
+chat_store = ChatStore()
+chat_orchestrator = ChatOrchestrator(
+    agent=agent,
+    memory_service=memory_service,
+    llm_service=groq_service,
+    incident_store=incident_store,
+    chat_store=chat_store,
+)
 
 app.state.agent = agent
 app.state.memory_service = memory_service
 app.state.incident_store = incident_store
 app.state.groq_service = groq_service
+app.state.chat_store = chat_store
+app.state.chat_orchestrator = chat_orchestrator
 
 # Routes
 app.include_router(health.router, prefix="/api", tags=["Health"])
+app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 app.include_router(incidents.router, prefix="/api/incidents", tags=["Incidents"])
 app.include_router(memory.router, prefix="/api/memory", tags=["Memory"])
 app.include_router(ingest.router, prefix="/api/ingest", tags=["Ingestion"])

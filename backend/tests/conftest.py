@@ -36,6 +36,25 @@ class FakeLLM:
             raise LLMError("Simulated LLM rate limit or parsing failure")
         return dict(self.response)
 
+    async def generate_text(self, system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
+        self.call_count += 1
+        self.last_system_prompt = system_prompt
+        self.last_user_prompt = user_prompt
+        if self.should_fail:
+            raise LLMError("Simulated LLM text failure")
+        return "Based on organizational memory, past incident DEMO-001 showed that isolating FIN-WS-042 stopped the PowerShell beacon."
+
+    async def stream_text(self, system_prompt: str, user_prompt: str, temperature: float = 0.3):
+        self.call_count += 1
+        self.last_system_prompt = system_prompt
+        self.last_user_prompt = user_prompt
+        if self.should_fail:
+            yield "LLM communication failure"
+            return
+        tokens = ["Based ", "on ", "memory, ", "isolation ", "worked."]
+        for t in tokens:
+            yield t
+
     async def check_connection(self) -> bool:
         return not self.should_fail
 

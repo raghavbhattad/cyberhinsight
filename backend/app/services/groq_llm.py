@@ -58,6 +58,55 @@ class GroqLLMService:
             logger.warning("All retries exhausted for model=%s, trying fallback", model)
         raise LLMError(f"LLM failed after retries: {type(last_err).__name__}: {last_err}")
 
+    async def generate_text(
+        self, system_prompt: str, user_prompt: str, temperature: float = 0.3
+    ) -> str:
+        """Call LLM returning plain Markdown text (not constrained to JSON)."""
+        models = [self.model]
+        if self.fallback_model:
+            models.append(self.fallback_model)
+        for model in models:
+            try:
+                resp = await self.client.chat.completions.create(
+                    model=model,
+                    temperature=temperature,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                )
+                return resp.choices[0].message.content or ""
+            except Exception as e:
+                logger.warning("LLM text generation failed for model %s: %s", model, e)
+        raise LLMError("LLM text generation failed across all available models")
+
+    async def stream_text(
+        self, system_prompt: str, user_prompt: str, temperature: float = 0.3
+    ):
+        """Async generator streaming text tokens from the LLM."""
+        models = [self.model]
+        if self.fallback_model:
+            models.append(self.fallback_model)
+        for model in models:
+            try:
+                stream = await self.client.chat.completions.create(
+                    model=model,
+                    temperature=temperature,
+                    stream=True,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_prompt},
+                    ],
+                )
+                async for chunk in stream:
+                    delta = chunk.choices[0].delta.content or ""
+                    if delta:
+                        yield delta
+                return
+            except Exception as e:
+                logger.warning("LLM text streaming failed for model %s: %s", model, e)
+        yield "I encountered a communication error with the analysis model. Please try again."
+
     async def check_connection(self) -> bool:
         """Cached for 30s so /health doesn't burn tokens on every poll."""
         ts, ok = self._health_cache

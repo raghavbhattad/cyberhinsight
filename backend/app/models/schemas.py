@@ -261,3 +261,45 @@ class SIEMAlert(BaseModel):
     process_tree: str = ""
     timestamp: str = ""
     raw: str = ""
+
+
+class ChatSource(BaseModel):
+    id: str | None = None
+    snippet: str
+    score: float | None = None
+    kind: str | None = None  # incident | outcome | analyst_note | observation
+    tags: list[str] = []
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str
+    timestamp: str | None = None
+    sources: list[ChatSource] = []
+    intent: str | None = None
+    report: InvestigationResponse | None = None
+
+
+class ChatRequest(BaseModel):
+    conversation_id: str | None = None
+    message: str
+    use_memory: bool = True
+
+
+class ChatResponse(BaseModel):
+    conversation_id: str
+    intent: Literal["investigate", "ask_history", "general", "teach"]
+    answer: str
+    sources: list[ChatSource] = []
+    report: InvestigationResponse | None = None
+    memory_used: bool
+    memory_saved: bool
+    suggestions: list[str] = []
+
+
+class ConversationSummary(BaseModel):
+    id: str
+    title: str
+    updated_at: str
+    message_count: int
+
