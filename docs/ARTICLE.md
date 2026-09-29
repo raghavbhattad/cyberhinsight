@@ -4,7 +4,7 @@ Two weeks apart, the same phishing campaign hit two different Finance workstatio
 
 That gap is what I built CyberHinsight to close. It is a chat assistant for a security team that remembers every incident it has handled, what the team did about it, and whether it worked. The memory layer runs on [Hindsight](https://github.com/vectorize-io/hindsight), an open-source system for agent memory.
 
-<!-- [Screenshot: an investigation answer with the memory chip expanded] -->
+![Investigation answer with Hindsight memory chip expanded](img/02-investigation.png)
 
 ---
 
@@ -48,6 +48,8 @@ def deterministic_intent_check(message: str) -> tuple[IntentType | None, str]:
 ```
 
 An investigation runs a fixed pipeline: extract indicators, recall similar past incidents, analyze, link to a campaign if one exists, then retain the result. Every answer shows a small chip that says how many memories it used, and opening it shows the real recalled entries.
+
+![CyberHinsight SOC Dashboard with incident telemetry and memory tracking](img/01-dashboard.png)
 
 ---
 
@@ -119,21 +121,21 @@ Here is the same phishing alert with recall switched off. Each answer has a "Com
 
 > **Without memory (baseline):**
 >
-> 1. Isolate the affected endpoint.
-> 2. Reset the user's credentials.
-> 3. Review proxy logs for the sender domain.
+> 1. Isolate the finance workstation from the network.
+> 2. Terminate the PowerShell process.
+> 3. Block outbound traffic to `198.51.100.45` at the firewall.
 
-And here is the second Finance incident, with memory on:
+And here is the investigation with Hindsight memory turned on:
 
-> **With memory (second incident):**
+> **With Hindsight memory (organization-aware):**
 >
-> 1. Isolate FIN-WS-051 before rebooting — isolation was effective on FIN-WS-042 in the earlier Finance incident.
-> 2. Block `198.51.100.0/24` at the proxy.
-> 3. Check the second Finance host for the same `.docm` attachment.
+> 1. Isolate `FIN-WS-042` from the network – this action was taken in earlier incidents and helped contain the beacon.
+> 2. Reset the finance user’s credentials and invalidate all active sessions – this was taken in `[DEMO-001]` after similar compromise.
+> 3. Remove `invoice_7482.docm`, delete PowerShell dropper artifacts, and clean persistence registry keys – actions performed in earlier incident investigations.
 >
-> **Campaign notice:** linked to 1 earlier incident (shared: `198.51.100.45`).
+> **Campaign notice:** This looks connected to 17 earlier incidents (`CMP-d6c46589`, shared: `198.51.100.45`).
 
-<!-- [Replace the two blocks above with the exact text from your own captured runs, so they match your screenshots.] -->
+![Before and after comparison of investigation with and without Hindsight memory](img/04-comparison.png)
 
 The second answer is not smarter in a general sense. It is specific to this organization, and it says where the specifics came from.
 
@@ -143,9 +145,17 @@ The second answer is not smarter in a general sense. It is specific to this orga
 
 Because the same memory backs the chat, the analyst can ask instead of search:
 
-> **Have we seen 198.51.100.45 before?**
+> **Have we seen 198.51.100.45 before in past incidents?**
 >
-> Yes. It appeared in the earlier Finance phishing incident (FIN-WS-042), where the workstation was isolated and the action was marked effective.
+> Yes. The address `198.51.100.45` appears in several recorded incidents:
+> - Finance workstation `FIN-WS-042` opened a malicious document (`invoice_7482.docm`) on 2026-09-29, executed PowerShell and beaconed to `198.51.100.45` [**memory**].
+> - Immediate containment actions for that 2026-09-29 phishing incident included blocking traffic to `198.51.100.45` [**memory**].
+> - A similar attack on 2026-09-27 targeted the same endpoint, with PowerShell beaconing to `198.51.100.45` [**memory**].
+> - The phishing campaign `CMP-d6c46589` on 2026-09-29 also referenced `198.51.100.45` [**DEMO-001**].
+>
+> No other IPs are mentioned in the current memory.
+
+![Historical query answering whether an IP was seen before in prior incidents](img/03-history.png)
 
 In history mode the model is told to answer only from the memory block and to say "I have no record" when it has none. I would rather have an assistant that admits a gap than one that invents an incident number.
 
@@ -177,4 +187,4 @@ The specificity score I chart on the learning-curve page is a simple heuristic: 
 
 The ingestion endpoint already accepts SIEM-style JSON alerts and runs them through the same pipeline, so the next step is wiring it to a real Sentinel or Splunk webhook and letting the assistant open the conversation itself. If you are new to the idea, the [Hindsight documentation](https://hindsight.vectorize.io/) covers retain, recall, and reflect, and this overview of [agent memory](https://vectorize.io/what-is-agent-memory) explains why stateless prompts hit a ceiling.
 
-The source is here: **[REPO URL]**
+The source is here: [github.com/raghavbhattad/cyberhinsight](https://github.com/raghavbhattad/cyberhinsight)

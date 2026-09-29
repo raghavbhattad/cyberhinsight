@@ -53,6 +53,12 @@ export default function AssistantMessage({
     return () => clearTimeout(timer);
   }, [report?.id, isIndexed]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('compare=1') && (report || sources.length > 0) && userPrompt && !baselineAnswer && !loadingCompare) {
+      handleCompareWithoutMemory();
+    }
+  }, [userPrompt, report, sources]);
+
   const handleCompareWithoutMemory = async () => {
     if (baselineAnswer) {
       setComparing(true);

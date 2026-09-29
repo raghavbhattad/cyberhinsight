@@ -20,9 +20,11 @@ export default function Sidebar({
   refreshKey,
 }) {
   const [conversations, setConversations] = useState([]);
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem('ch_theme') || 'light'
-  );
+  const [theme, setTheme] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('theme=dark')) return 'dark';
+    if (typeof window !== 'undefined' && window.location.search.includes('theme=light')) return 'light';
+    return localStorage.getItem('ch_theme') || 'dark';
+  });
   const navigate = useNavigate();
 
   useEffect(() => {

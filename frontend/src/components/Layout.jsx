@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import { healthCheck } from '../services/api';
 import { Menu, AlertTriangle } from 'lucide-react';
@@ -13,6 +13,14 @@ export default function Layout({
   const [health, setHealth] = useState({ status: 'ok', hindsight: true, groq: true });
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const cId = searchParams.get('c');
+    if (cId && cId !== activeConversationId) {
+      setActiveConversationId(cId);
+    }
+  }, [searchParams, activeConversationId, setActiveConversationId]);
 
   useEffect(() => {
     const check = async () => {

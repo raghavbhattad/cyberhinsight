@@ -2,7 +2,9 @@ import React, { useState } from 'react';
 import { Brain, ChevronDown, ChevronUp } from 'lucide-react';
 
 export default function SourcesChip({ sources = [], checkedCount = 0 }) {
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(() => {
+    return typeof window !== 'undefined' && window.location.search.includes('expand=1');
+  });
 
   if (!sources || sources.length === 0) {
     if (checkedCount && checkedCount > 0) {
@@ -29,7 +31,7 @@ export default function SourcesChip({ sources = [], checkedCount = 0 }) {
   };
 
   return (
-    <div style={{ display: 'inline-block' }}>
+    <div style={{ display: 'block', width: '100%' }}>
       <button
         type="button"
         className="memory-chip"
