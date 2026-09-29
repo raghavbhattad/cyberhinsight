@@ -1,102 +1,104 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" width="100%" height="100%" style="background-color: #060911; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 660" width="100%" height="100%" style="background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
   <defs>
-    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#00f0ff" stop-opacity="0.25"/>
-      <stop offset="100%" stop-color="#0e1526" stop-opacity="0.95"/>
-    </linearGradient>
-    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#16223d" stop-opacity="0.8"/>
-      <stop offset="100%" stop-color="#0a0f1d" stop-opacity="0.95"/>
-    </linearGradient>
-    <filter id="cyanGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
-    </filter>
+    <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#14b8a6"/>
+    </marker>
+    <marker id="arrow-blue" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 8 5 L 0 9 z" fill="#38bdf8"/>
+    </marker>
   </defs>
 
-  <!-- Title -->
-  <text x="480" y="42" text-anchor="middle" fill="#ffffff" font-size="22" font-weight="800" letter-spacing="-0.5">CYBERHINSIGHT DEFENSE ARCHITECTURE</text>
-  <text x="480" y="64" text-anchor="middle" fill="#00f0ff" font-size="12" font-family="monospace" letter-spacing="1.5">AUTONOMOUS INCIDENT RESPONSE WITH HINDSIGHT AGENT MEMORY</text>
+  <!-- Header -->
+  <text x="500" y="44" text-anchor="middle" fill="#f8fafc" font-size="22" font-weight="700">CyberHinsight v2 — Chat-First Architecture</text>
+  <text x="500" y="68" text-anchor="middle" fill="#14b8a6" font-size="13" font-family="monospace">CONVERSATIONAL SOC ASSISTANT POWERED BY HINDSIGHT PERSISTENT MEMORY &amp; GROQ</text>
 
-  <!-- Section 1: Ingestion -->
-  <rect x="40" y="95" width="220" height="230" rx="10" fill="url(#cardGrad)" stroke="#2a3854" stroke-width="1.5"/>
-  <text x="55" y="125" fill="#38bdf8" font-size="11" font-weight="700" font-family="monospace">1. INGESTION LAYER</text>
+  <!-- 1. Client Layer -->
+  <rect x="40" y="100" width="220" height="230" rx="10" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+  <text x="55" y="128" fill="#38bdf8" font-size="11" font-weight="700" font-family="monospace">1. CLIENT INTERFACE</text>
   
-  <rect x="55" y="145" width="190" height="70" rx="6" fill="#080d19" stroke="#1f2d42"/>
-  <text x="68" y="172" fill="#ffffff" font-size="13" font-weight="700">SOC Analyst Web Console</text>
-  <text x="68" y="192" fill="#94a3b8" font-size="10">React 18 + Vite (Port 5173)</text>
-  <text x="68" y="206" fill="#00f0ff" font-size="9" font-family="monospace">Live Timeline &amp; Learning Curve</text>
+  <rect x="55" y="145" width="190" height="75" rx="8" fill="#0f172a" stroke="#334155"/>
+  <text x="70" y="172" fill="#ffffff" font-size="13" font-weight="600">SOC Analyst Chat UI</text>
+  <text x="70" y="192" fill="#94a3b8" font-size="11">React 18 + Vite · SSE Streaming</text>
+  <text x="70" y="208" fill="#14b8a6" font-size="10" font-family="monospace">Claude-like calm interface</text>
 
-  <rect x="55" y="230" width="190" height="70" rx="6" fill="#080d19" stroke="#1f2d42"/>
-  <text x="68" y="257" fill="#ffffff" font-size="13" font-weight="700">SIEM Alert Ingest</text>
-  <text x="68" y="277" fill="#94a3b8" font-size="10">POST /api/ingest/alert</text>
-  <text x="68" y="291" fill="#10b981" font-size="9" font-family="monospace">Sentinel / Splunk / CrowdStrike</text>
+  <rect x="55" y="235" width="190" height="75" rx="8" fill="#0f172a" stroke="#334155"/>
+  <text x="70" y="262" fill="#ffffff" font-size="13" font-weight="600">SIEM Alert Ingest</text>
+  <text x="70" y="282" fill="#94a3b8" font-size="11">POST /api/ingest/alert</text>
+  <text x="70" y="298" fill="#10b981" font-size="10" font-family="monospace">Sentinel · Splunk · CrowdStrike</text>
 
-  <!-- Arrow to Orchestrator -->
-  <path d="M 260 210 L 330 210" stroke="#00f0ff" stroke-width="2" marker-end="url(#arrow)" stroke-dasharray="4 2"/>
-  <text x="295" y="200" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="monospace">REST API</text>
+  <!-- Arrow: Client -> Gateway -->
+  <path d="M 260 215 L 320 215" stroke="#14b8a6" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="290" y="205" text-anchor="middle" fill="#94a3b8" font-size="9" font-family="monospace">/api/chat</text>
 
-  <!-- Section 2: FastAPI Orchestrator -->
-  <rect x="330" y="95" width="300" height="480" rx="10" fill="url(#cardGrad)" stroke="#00f0ff" stroke-width="1.5" filter="url(#cyanGlow)"/>
-  <text x="350" y="125" fill="#00f0ff" font-size="11" font-weight="700" font-family="monospace">2. AGENT ORCHESTRATION CORE (FASTAPI)</text>
+  <!-- 2. Gateway & Intent Router -->
+  <rect x="320" y="100" width="280" height="520" rx="10" fill="#1e293b" stroke="#14b8a6" stroke-width="1.5"/>
+  <text x="340" y="128" fill="#14b8a6" font-size="11" font-weight="700" font-family="monospace">2. FASTAPI &amp; INTENT ROUTER</text>
 
-  <rect x="350" y="145" width="260" height="55" rx="6" fill="#080d19" stroke="#1f2d42"/>
-  <text x="365" y="170" fill="#ffffff" font-size="12" font-weight="700">Deterministic IOC Extractor</text>
-  <text x="365" y="188" fill="#94a3b8" font-size="10">IPv4/CIDR, Domains, Hashes, Hostnames, MITRE</text>
+  <!-- Router box -->
+  <rect x="340" y="145" width="240" height="60" rx="8" fill="#0f172a" stroke="#334155"/>
+  <text x="355" y="170" fill="#ffffff" font-size="12" font-weight="600">Deterministic Intent Router</text>
+  <text x="355" y="188" fill="#94a3b8" font-size="10">Regex IOC rules + Groq classification fallback</text>
 
-  <rect x="350" y="215" width="260" height="85" rx="6" fill="#080d19" stroke="#00f0ff" stroke-opacity="0.4"/>
-  <text x="365" y="240" fill="#ffffff" font-size="12" font-weight="700">Security Agent Core (Asyncio)</text>
-  <text x="365" y="258" fill="#94a3b8" font-size="10">• Memory-Enriched Prompt Construction</text>
-  <text x="365" y="274" fill="#94a3b8" font-size="10">• LLMAnalysis Pydantic Output Validation</text>
-  <text x="365" y="290" fill="#94a3b8" font-size="10">• Retain Verification &amp; Prompt Isolation</text>
+  <!-- 4 Handlers -->
+  <rect x="340" y="220" width="240" height="85" rx="8" fill="#0f172a" stroke="#14b8a6" stroke-width="1.2"/>
+  <text x="355" y="244" fill="#14b8a6" font-size="12" font-weight="600">A. Investigate Handler</text>
+  <text x="355" y="262" fill="#94a3b8" font-size="10">• Deterministic IOC extraction</text>
+  <text x="355" y="278" fill="#94a3b8" font-size="10">• Recall past precedents &amp; correlate campaigns</text>
+  <text x="355" y="294" fill="#94a3b8" font-size="10">• Retain verified findings into memory</text>
 
-  <rect x="350" y="315" width="260" height="70" rx="6" fill="#080d19" stroke="#1f2d42"/>
-  <text x="365" y="340" fill="#ffffff" font-size="12" font-weight="700">Campaign Linker &amp; Predictor</text>
-  <text x="365" y="358" fill="#94a3b8" font-size="10">• Shared Subnet &amp; Hash Correlation</text>
-  <text x="365" y="374" fill="#f59e0b" font-size="10">• Grounded Escalation Forecasting</text>
+  <rect x="340" y="320" width="240" height="75" rx="8" fill="#0f172a" stroke="#334155"/>
+  <text x="355" y="344" fill="#ffffff" font-size="12" font-weight="600">B. Ask History Handler</text>
+  <text x="355" y="362" fill="#94a3b8" font-size="10">• Strict grounded recall (never invent facts)</text>
+  <text x="355" y="378" fill="#94a3b8" font-size="10">• Returns real sources with relevance scores</text>
 
-  <rect x="350" y="400" width="260" height="55" rx="6" fill="#080d19" stroke="#1f2d42"/>
-  <text x="365" y="425" fill="#ffffff" font-size="12" font-weight="700">Outcome Feedback Loop</text>
-  <text x="365" y="443" fill="#10b981" font-size="10">Effective / Ineffective learning signals</text>
+  <rect x="340" y="410" width="240" height="70" rx="8" fill="#0f172a" stroke="#334155"/>
+  <text x="355" y="434" fill="#ffffff" font-size="12" font-weight="600">C. Teach Handler</text>
+  <text x="355" y="452" fill="#94a3b8" font-size="10">• Retains analyst feedback (effective/failed)</text>
+  <text x="355" y="468" fill="#94a3b8" font-size="10">• Adapts future prompts &amp; playbooks</text>
 
-  <rect x="350" y="470" width="260" height="50" rx="6" fill="#080d19" stroke="#1f2d42"/>
-  <text x="365" y="495" fill="#ffffff" font-size="12" font-weight="700">Atomic Incident Store</text>
-  <text x="365" y="511" fill="#94a3b8" font-size="10">JSON persistence with atomic file writes</text>
+  <rect x="340" y="495" width="240" height="60" rx="8" fill="#0f172a" stroke="#334155"/>
+  <text x="355" y="519" fill="#ffffff" font-size="12" font-weight="600">D. General Handler</text>
+  <text x="355" y="537" fill="#94a3b8" font-size="10">Practical defensive security guidance</text>
 
-  <!-- Section 3: Dual Intelligence Cores -->
-  <!-- Groq -->
-  <rect x="690" y="95" width="230" height="150" rx="10" fill="url(#cardGrad)" stroke="#8b5cf6" stroke-width="1.5"/>
-  <text x="710" y="125" fill="#c084fc" font-size="11" font-weight="700" font-family="monospace">3A. GROQ INFERENCE</text>
-  <rect x="705" y="145" width="200" height="85" rx="6" fill="#080d19" stroke="#2a1f42"/>
-  <text x="720" y="172" fill="#ffffff" font-size="13" font-weight="700">openai/gpt-oss-120b</text>
-  <text x="720" y="192" fill="#94a3b8" font-size="10">Fallback: qwen/qwen3-32b</text>
-  <text x="720" y="210" fill="#a855f7" font-size="10" font-family="monospace">Sub-second reasoning</text>
+  <rect x="340" y="565" width="240" height="40" rx="6" fill="#0f172a" stroke="#334155"/>
+  <text x="355" y="589" fill="#cbd5e1" font-size="10" font-family="monospace">ChatStore: Atomic JSON · 20 Turn Cap</text>
 
-  <!-- Hindsight -->
-  <rect x="690" y="270" width="230" height="305" rx="10" fill="url(#cyanGrad)" stroke="#00f0ff" stroke-width="2"/>
-  <text x="710" y="300" fill="#00f0ff" font-size="11" font-weight="800" font-family="monospace">3B. HINDSIGHT CLOUD MEMORY</text>
+  <!-- Arrows: Gateway -> Intelligence -->
+  <path d="M 580 260 L 670 200" stroke="#38bdf8" stroke-width="1.8" marker-end="url(#arrow-blue)"/>
+  <path d="M 580 260 L 670 420" stroke="#14b8a6" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <path d="M 580 355 L 670 420" stroke="#14b8a6" stroke-width="1.8" marker-end="url(#arrow)"/>
+  <path d="M 580 445 L 670 480" stroke="#14b8a6" stroke-width="1.8" marker-end="url(#arrow)"/>
 
-  <rect x="705" y="320" width="200" height="70" rx="6" fill="#080d19" stroke="#00f0ff" stroke-opacity="0.3"/>
-  <text x="720" y="345" fill="#00f0ff" font-size="12" font-weight="700 font-family='monospace'">arecall()</text>
-  <text x="720" y="365" fill="#94a3b8" font-size="10">Semantic vector retrieval</text>
-  <text x="720" y="380" fill="#38bdf8" font-size="9" font-family="monospace">Real ranking scores</text>
+  <!-- 3. Groq Acceleration -->
+  <rect x="670" y="100" width="290" height="200" rx="10" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="690" y="128" fill="#38bdf8" font-size="11" font-weight="700" font-family="monospace">3. GROQ INFERENCE ACCELERATION</text>
+  
+  <rect x="690" y="145" width="250" height="65" rx="6" fill="#0f172a" stroke="#334155"/>
+  <text x="705" y="170" fill="#ffffff" font-size="12" font-weight="600">Structured JSON Diagnostics</text>
+  <text x="705" y="188" fill="#94a3b8" font-size="10">Validation retry with feedback loop</text>
+  <text x="705" y="200" fill="#38bdf8" font-size="9" font-family="monospace">openai/gpt-oss-120b</text>
 
-  <rect x="705" y="405" width="200" height="75" rx="6" fill="#080d19" stroke="#00f0ff" stroke-opacity="0.3"/>
-  <text x="720" y="430" fill="#00f0ff" font-size="12" font-weight="700 font-family='monospace'">aretain()</text>
-  <text x="720" y="450" fill="#94a3b8" font-size="10">Stable document_id upsert</text>
-  <text x="720" y="465" fill="#10b981" font-size="9" font-family="monospace">Tags: cat, sev, outcome, cmp</text>
+  <rect x="690" y="220" width="250" height="65" rx="6" fill="#0f172a" stroke="#334155"/>
+  <text x="705" y="245" fill="#ffffff" font-size="12" font-weight="600">Real-Time Token Streaming</text>
+  <text x="705" y="263" fill="#94a3b8" font-size="10">Grounded history Q&amp;A generation</text>
+  <text x="705" y="275" fill="#38bdf8" font-size="9" font-family="monospace">Server-Sent Events (SSE)</text>
 
-  <rect x="705" y="495" width="200" height="65" rx="6" fill="#080d19" stroke="#00f0ff" stroke-opacity="0.3"/>
-  <text x="720" y="520" fill="#00f0ff" font-size="12" font-weight="700 font-family='monospace'">areflect()</text>
-  <text x="720" y="538" fill="#94a3b8" font-size="10">Learned Playbook synthesis</text>
-  <text x="720" y="552" fill="#eab308" font-size="9" font-family="monospace">"What works here" evidence</text>
+  <!-- 4. Hindsight Memory -->
+  <rect x="670" y="320" width="290" height="300" rx="10" fill="#1e293b" stroke="#14b8a6" stroke-width="1.5"/>
+  <text x="690" y="348" fill="#14b8a6" font-size="11" font-weight="700" font-family="monospace">4. HINDSIGHT CLOUD VECTOR MEMORY</text>
 
-  <!-- Connectors between Orchestrator and Engines -->
-  <path d="M 610 180 L 690 180" stroke="#8b5cf6" stroke-width="2"/>
-  <path d="M 610 355 L 690 355" stroke="#00f0ff" stroke-width="2"/>
-  <path d="M 610 440 L 690 440" stroke="#00f0ff" stroke-width="2"/>
-  <path d="M 610 525 L 690 525" stroke="#00f0ff" stroke-width="2"/>
+  <rect x="690" y="365" width="250" height="65" rx="6" fill="#0f172a" stroke="#14b8a6" stroke-width="1"/>
+  <text x="705" y="390" fill="#14b8a6" font-size="12" font-weight="600">arecall() — Precedent Retrieval</text>
+  <text x="705" y="408" fill="#94a3b8" font-size="10">Semantic search with empirical score ranking</text>
+  <text x="705" y="420" fill="#cbd5e1" font-size="9" font-family="monospace">budget: mid · tags_match: any</text>
 
-  <!-- Footer note -->
-  <text x="480" y="598" text-anchor="middle" fill="#475569" font-size="10" font-family="monospace">Defensive SOC Intelligence System • Built with Hindsight Cloud &amp; Groq Cloud Inference</text>
+  <rect x="690" y="440" width="250" height="75" rx="6" fill="#0f172a" stroke="#14b8a6" stroke-width="1"/>
+  <text x="705" y="465" fill="#14b8a6" font-size="12" font-weight="600">aretain() — Structured Storage</text>
+  <text x="705" y="483" fill="#94a3b8" font-size="10">Incident telemetry, outcomes &amp; analyst notes</text>
+  <text x="705" y="497" fill="#cbd5e1" font-size="9" font-family="monospace">tags: [incident, outcome, cat, sev]</text>
+
+  <rect x="690" y="525" width="250" height="75" rx="6" fill="#0f172a" stroke="#14b8a6" stroke-width="1"/>
+  <text x="705" y="550" fill="#14b8a6" font-size="12" font-weight="600">areflect() — Pattern Synthesis</text>
+  <text x="705" y="568" fill="#94a3b8" font-size="10">Synthesizes "What I've Learned" playbook</text>
+  <text x="705" y="582" fill="#cbd5e1" font-size="9" font-family="monospace">budget: high · cross-ticket learning</text>
 </svg>

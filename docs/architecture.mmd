@@ -1,48 +1,61 @@
 flowchart TD
-    subgraph Ingestion["1. Ingestion Layer"]
-        SIEM["SIEM Webhook\n(Sentinel / Splunk / CrowdStrike)"]
-        UI["SOC Analyst Web Console\n(React 18 + Vite)"]
+    subgraph Client["1. Client Interface"]
+        UI["SOC Analyst Chat Console\n(React 18 + Vite · Claude-like UI)"]
+        SIEM["SIEM Ingestion Webhook\n(Sentinel / Splunk / CrowdStrike)"]
     end
 
-    subgraph Backend["2. Orchestration Core (FastAPI Async)"]
-        AUTH["API Key Auth & Rate Limiting\n(X-API-Key / Request Validation)"]
-        IOC["Deterministic IOC Extractor\n(IPv4/CIDR, Domains, Hashes, Hostnames, MITRE)"]
-        ORCH["Security Agent Pipeline\n(Asyncio, Fallback Models, Structured Logging)"]
-        STORE["Incident Store\n(Atomic JSON Persistence)"]
-        CMP["Campaign Linker & Escalation Predictor\n(Subnet Matching & Progression Forecasting)"]
+    subgraph Gateway["2. FastAPI Core & Intent Router"]
+        AUTH["API Key Auth & Validation\n(MAX_INCIDENT_CHARS = 10,000)"]
+        ROUTER["Intent Router\n(Deterministic Rules + LLM Fallback)"]
     end
 
-    subgraph Intelligence["3. Dual Intelligence Engines"]
-        subgraph Groq["Groq Cloud Acceleration"]
-            LLM["openai/gpt-oss-120b\nFallback: qwen/qwen3-32b\n(Structured JSON Diagnostics)"]
+    subgraph Handlers["3. Specialized Handlers"]
+        INV["Investigate Handler\n(IOC Extraction · Campaign Linking · Triage)"]
+        HIST["Ask History Handler\n(Strict Grounded Recall · No Invented Facts)"]
+        TEACH["Teach Handler\n(Analyst Feedback & Priority Fact Retain)"]
+        GEN["General Handler\n(Defensive Security Guidance)"]
+    end
+
+    subgraph Intelligence["4. Dual AI Engines"]
+        subgraph Groq["Groq High-Throughput Inference"]
+            LLM_JSON["Structured JSON Analysis\n(Validation & Error-Recovery Retry)"]
+            LLM_STREAM["Real-Time Token Streaming\n(Markdown Generation)"]
         end
 
-        subgraph Hindsight["Hindsight Cloud Vector Memory Bank"]
-            RECALL["arecall()\n(Semantic & Keyword Retrieval,\nEmpirical Scores & Rank)"]
-            RETAIN["aretain()\n(Incident & Outcome Vectors,\nDocument Upsert & Structured Tags)"]
-            REFLECT["areflect()\n(Organizational Playbook Synthesis,\nCross-Ticket Pattern Discovery)"]
+        subgraph Hindsight["Hindsight Cloud Persistent Memory"]
+            RECALL["arecall()\n(Semantic & Keyword Retrieval · Scores)"]
+            RETAIN["aretain()\n(Incident & Outcome Tags · Document Upsert)"]
+            REFLECT["areflect()\n(Organizational Playbook Synthesis)"]
         end
     end
 
-    subgraph Feedback["4. Learning & Feedback Loop"]
-        ANALYST["Analyst Outcome Evaluation\n(Effective / Partial / Ineffective / False Positive)"]
+    subgraph Storage["5. Persistence"]
+        CHAT_STORE["Chat Store\n(Atomic File JSON · 20-Turn Cap)"]
+        INC_STORE["Incident Store\n(Auditable Triage Records)"]
     end
 
     %% Data Flow
+    UI -->|POST /api/chat & /api/chat/stream| AUTH
     SIEM -->|POST /api/ingest/alert| AUTH
-    UI -->|POST /api/incidents/investigate| AUTH
-    AUTH --> IOC
-    IOC --> ORCH
-    ORCH -->|1. Query| RECALL
-    RECALL -->|Historical Precedents & Scores| ORCH
-    ORCH -->|2. Memory-Enriched Prompt| LLM
-    LLM -->|Validated JSON Analysis| ORCH
-    ORCH --> CMP
-    CMP -->|Campaign Links & Predictions| ORCH
-    ORCH -->|3. Retain Investigation| RETAIN
-    ORCH --> STORE
-    ORCH -->|Response with Precedents & Lift| UI
-    UI -->|POST /api/incidents/{id}/feedback| ANALYST
-    ANALYST -->|4. Retain Outcome Memory| RETAIN
-    RETAIN -.->|Enriches Future Recalls| RECALL
-    REFLECT -->|GET /api/memory/playbook| UI
+    AUTH --> ROUTER
+
+    ROUTER -->|intent: investigate| INV
+    ROUTER -->|intent: ask_history| HIST
+    ROUTER -->|intent: teach| TEACH
+    ROUTER -->|intent: general| GEN
+
+    INV -->|Recall Precedents| RECALL
+    INV -->|Analyze Triage| LLM_JSON
+    INV -->|Retain Investigation| RETAIN
+    INV --> INC_STORE
+
+    HIST -->|Retrieve Relevant Memories| RECALL
+    HIST -->|Synthesize Grounded Answer| LLM_STREAM
+
+    TEACH -->|Retain Outcome / Note| RETAIN
+
+    GEN -->|Guidance Query| LLM_STREAM
+
+    INV & HIST & TEACH & GEN --> CHAT_STORE
+    CHAT_STORE -->|Stream SSE / Final Response| UI
+    RETAIN -.->|Enriches Future Queries| RECALL

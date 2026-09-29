@@ -169,6 +169,50 @@ async def test_teach_retains_memory(temp_chat_store, temp_incident_store):
 
 
 @pytest.mark.asyncio
+async def test_teach_influences_subsequent_answer(temp_chat_store, temp_incident_store):
+    """Proves with fakes that a taught note/feedback gets recalled in later investigations, changing the prompt context."""
+    fake_memory = FakeMemory()
+    fake_llm = FakeLLM()
+    agent = SecurityAgent(fake_llm, fake_memory)
+    orchestrator = ChatOrchestrator(
+        agent=agent,
+        memory_service=fake_memory,
+        llm_service=fake_llm,
+        incident_store=temp_incident_store,
+        chat_store=temp_chat_store,
+    )
+
+    # Step 1: Analyst teaches a critical fact
+    teach_req = ChatRequest(
+        message="Remember that FIN-WS-042 is the CFO's laptop, treat as high priority",
+        use_memory=True,
+    )
+    teach_resp = await orchestrator.process_chat(teach_req)
+    assert teach_resp.memory_saved is True
+    retained_item = fake_memory.retained_items[0]
+
+    # Step 2: Make FakeMemory recall the newly taught memory
+    fake_memory.recall_results = [{
+        "text": retained_item["content"],
+        "document_id": retained_item["document_id"],
+        "score": 0.95,
+        "tags": retained_item["tags"],
+    }]
+
+    # Step 3: Next investigation query for the same asset
+    inv_req = ChatRequest(
+        message="Alert observed on FIN-WS-042 connecting to 198.51.100.45 with PowerShell",
+        use_memory=True,
+    )
+    inv_resp = await orchestrator.process_chat(inv_req)
+
+    # Assert that the prompt now contains the taught note inside <memory>
+    assert "CFO's laptop" in fake_llm.last_user_prompt
+    assert "<memory>" in fake_llm.last_user_prompt
+    assert inv_resp.memory_used is True
+
+
+@pytest.mark.asyncio
 async def test_investigate_baseline_does_not_retain(temp_chat_store, temp_incident_store):
     """Investigation with use_memory=False (baseline) does not retain or store in history."""
     fake_memory = FakeMemory()

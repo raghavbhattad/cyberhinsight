@@ -1,36 +1,17 @@
 # 🛡️ CyberHinsight
 
-> **Defensive AI Security Incident Response Agent with Persistent Hindsight Memory**
+> **Defensive AI Security Incident Response Assistant with Persistent Hindsight Memory**
 >
-> CyberHinsight transforms enterprise cybersecurity operations from stateless LLM playbooks into an autonomous SOC investigation agent. Powered by **Hindsight Cloud** persistent agent memory and **Groq** sub-second inference, CyberHinsight recalls past investigations, correlates multi-week adversary campaigns, and actively learns from containment outcomes to deliver context-aware defenses.
+> CyberHinsight transforms enterprise cybersecurity operations from stateless LLM playbooks into a conversational SOC security assistant that feels like Claude. Powered by **Hindsight Cloud** persistent agent memory and **Groq** sub-second inference, CyberHinsight recalls past investigations, correlates multi-week adversary campaigns, and actively learns from containment outcomes to deliver context-aware defenses.
 
 ---
 
-## 🚨 The Problem in Numbers
+## 💡 Why CyberHinsight?
 
-* **SOC Alert Fatigue**: Enterprise SOC teams triage over **10,000 security alerts weekly**, spending an average of **26 minutes per incident**.
-* **Organizational Amnesia**: Many recurring security incidents share underlying adversary infrastructure (reused C2 IP ranges, macro droppers, credential harvesters), yet traditional LLMs analyze each alert in total isolation with zero knowledge of past tickets.
-* **Flawed Generic Playbooks**: Generic AI assistants recommend cookie-cutter advice (e.g., "reset password") that fails in real environments where active session tokens must be revoked or where unisolated reboots allow malware persistence.
-
----
-
-## 💡 The Solution: CyberHinsight with Hindsight Memory
-
-```
-Security Alert / SIEM Webhook
-         ↓
-Deterministic IOC Extractor (Regex for IPv4/CIDR, Hashes, Domains, Hostnames)
-         ↓
-Hindsight Cloud Vector Memory (client.arecall with Empirical Ranking Scores)
-         ↓
-Campaign Linker & Escalation Forecast (Correlates Subnets & Predicts Mutation)
-         ↓
-Groq LLM Acceleration (Memory-Aware Prompt with Delimiter Hardening)
-         ↓
-Autonomous Defense Recommendations (Citing Past Precedents & Avoiding Failed Actions)
-         ↓
-Hindsight Retain (Upserts Incident Memory & Analyst Outcome Feedback)
-```
+* **Stateless LLM Amnesia**: Standard AI incident response tools analyze every ticket in isolation. When the same attacker infrastructure returns two weeks later, the AI starts from scratch with zero context.
+* **Hindsight-Powered Memory**: CyberHinsight uses Hindsight Cloud as its persistent organizational memory bank. It retains past investigations, containment outcomes, and analyst instructions. When an alert arrives, it recalls relevant precedents, checks shared infrastructure, and adapts its response.
+* **Strict Grounding**: For historical questions, the assistant answers *only* from recalled memory. It never invents incident numbers, dates, or IP addresses.
+* **Outcome Learning**: When an analyst marks a containment step as effective or notes an asset's priority, that fact is retained into Hindsight to shape future answers.
 
 ---
 
@@ -38,19 +19,31 @@ Hindsight Retain (Upserts Incident Memory & Analyst Outcome Feedback)
 
 ![CyberHinsight Defense Architecture](docs/architecture.svg)
 
+```
+User (SOC Analyst)
+       ↓
+Chat Interface (React 18 + Vite · SSE Streaming)
+       ↓
+FastAPI Backend & Intent Router
+   ├─► Investigate  ──► IOC Extractor ──► Hindsight Recall ──► Groq Analysis ──► Campaign Correlator ──► Retain
+   ├─► Ask History  ──► Hindsight Recall / Reflect ────────► Groq Plaintext Q&A (Strict Grounding)
+   ├─► Teach        ──► Hindsight Retain (Tags: analyst_note / outcome) ──► Confirmation
+   └─► General      ──► Groq Defensive Guidance (Enriched with memory if relevant)
+```
+
 | Layer | Component | Technology | Purpose |
 |---|---|---|---|
-| **Presentation** | SOC Dashboard Console | React 18 + Vite | Real-time telemetry, 6-step progress stepper, side-by-side Before/After comparison, empirical learning curve |
-| **Orchestration** | Security Agent Core | Python 3.13 + FastAPI | Asynchronous pipeline, IOC extraction, campaign correlation, Pydantic validation, auth |
-| **Inference** | Sub-Second Diagnostics | Groq Cloud | `openai/gpt-oss-120b` (Primary) with `qwen/qwen3-32b` (Fallback) |
-| **Agent Memory** | Persistent Vector Bank | Hindsight Cloud | `aretain`, `arecall`, `areflect`, `aset_mission` (Bank: `cyberhinsight`) |
+| **Client UI** | Calm Chat Console | React 18 + Vite | Single-screen Claude-like conversation, streaming SSE, collapsed report cards, memory source chips |
+| **API Gateway** | Intent Router & Engine | Python 3.13 + FastAPI | Deterministic routing + LLM fallback, IOC extraction, campaign linking, atomic JSON chat store |
+| **Inference** | Sub-Second Diagnostics | Groq Cloud | `openai/gpt-oss-120b` (Primary) with fallback support, streaming SSE generation |
+| **Memory** | Persistent Vector Bank | Hindsight Cloud | `aretain`, `arecall`, `areflect`, `aset_mission` (Bank: `cyberhinsight`) |
 
 ---
 
 ## ⚡ Quick Start Guide
 
 ### Prerequisites
-* **Python**: 3.11+ (Python 3.13 supported)
+* **Python**: 3.11+ (Python 3.13 tested)
 * **Node.js**: 18+ and npm 9+
 * **Groq API Key**: [console.groq.com](https://console.groq.com)
 * **Hindsight Cloud Account**: [ui.hindsight.vectorize.io](https://ui.hindsight.vectorize.io/signup)
@@ -78,9 +71,9 @@ pip install -r requirements-dev.txt
 
 # 5. Configure environment
 cp .env.example .env
-# Edit .env with your GROQ_API_KEY and HINDSIGHT_API_KEY
+# Edit .env with your GROQ_API_KEY, HINDSIGHT_API_KEY, and HINDSIGHT_BANK_ID
 
-# 6. Start backend server
+# 6. Run the server
 uvicorn app.main:app --reload --port 8000
 ```
 
@@ -95,131 +88,82 @@ cd frontend
 # 2. Install dependencies
 npm install
 
-# 3. Launch Vite development server
+# 3. Start development server
 npm run dev
 ```
 
-Visit [`http://localhost:5173`](http://localhost:5173) in your browser.
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-## ⚙️ Environment Variables
+## 🎬 60-Second Demo Walkthrough
 
-Configure these settings in `backend/.env`:
+Try the core learning loop right in the chat interface:
 
-| Variable | Type | Default | Description | Required |
-|---|---|---|---|---|
-| `GROQ_API_KEY` | `str` | *None* | Groq Cloud API key for ultra-fast LLM inference | **Yes** |
-| `HINDSIGHT_API_KEY` | `str` | *None* | Hindsight Cloud API key for agent memory | **Yes** |
-| `HINDSIGHT_BASE_URL` | `str` | `https://api.hindsight.vectorize.io` | Hindsight API base URL | **Yes** |
-| `HINDSIGHT_BANK_ID` | `str` | `cyberhinsight` | Memory bank identifier | **Yes** |
-| `LLM_MODEL` | `str` | `openai/gpt-oss-120b` | Primary Groq model for incident analysis | **Yes** |
-| `LLM_FALLBACK_MODEL` | `str` | `qwen/qwen3-32b` | Fallback model if primary encounters rate limits | No |
-| `APP_API_KEY` | `str` | *Empty* | Optional API key protecting write endpoints (`X-API-Key`). Leave empty for dev mode. | No |
-| `CORS_ORIGINS` | `str` | `http://localhost:5173,http://127.0.0.1:5173` | Comma-separated list of allowed CORS origins | No |
-| `MAX_INCIDENT_CHARS` | `int` | `8000` | Maximum allowed character length for incident descriptions | No |
-
----
-
-## 📡 Complete REST API Endpoints
-
-All endpoints are validated with Pydantic v2 schemas:
-
-### Investigation & Incident Store
-| Method | Path | Description | Auth |
-|---|---|---|---|
-| `POST` | `/api/incidents/investigate` | Investigate an incident narrative or EDR log (with or without memory) | Optional API Key |
-| `POST` | `/api/incidents/{incident_id}/feedback` | Submit analyst outcome feedback (`effective`, `ineffective`, etc.) | Optional API Key |
-| `GET` | `/api/incidents/history` | Retrieve full history of investigated incidents | Public |
-| `GET` | `/api/incidents/stats` | Retrieve aggregate metrics (by severity, category, recent feed) | Public |
-| `GET` | `/api/incidents/{incident_id}` | Retrieve details of a specific incident | Public |
-| `POST` | `/api/incidents/seed` | Seed synthetic incidents into memory and history | Optional API Key |
-| `POST` | `/api/incidents/reset` | Clear incident history store | Optional API Key |
-
-### Hindsight Agent Memory
-| Method | Path | Description | Auth |
-|---|---|---|---|
-| `POST` | `/api/memory/search` | Execute semantic vector search across memory bank with empirical scores | Public |
-| `GET` | `/api/memory/playbook` | Synthesize "What Works Here" learned playbook via `areflect()` | Public |
-| `POST` | `/api/memory/reflect` | Arbitrary pattern reflection across historical incident memories | Public |
-| `GET` | `/api/memory/stats` | Check memory bank connection and identifier | Public |
-| `POST` | `/api/memory/retain` | Directly retain custom knowledge into Hindsight | Optional API Key |
-
-### SIEM Ingestion Webhook
-| Method | Path | Description | Auth |
-|---|---|---|---|
-| `POST` | `/api/ingest/alert` | Ingest SIEM alerts (Sentinel, Splunk, CrowdStrike format) | Optional API Key |
-
-### Demo Evaluation & Learning Curve
-| Method | Path | Description | Auth |
-|---|---|---|---|
-| `POST` | `/api/demo/new-session` | Create a clean, isolated memory bank for cold-start demo testing | Optional API Key |
-| `POST` | `/api/demo/run-sequence` | Run automated 6-incident evaluation benchmark computing specificity scores | Optional API Key |
-| `GET` | `/api/demo/sequence-results` | Retrieve sequence results for the Learning Curve chart | Public |
-
-### System Health
-| Method | Path | Description | Auth |
-|---|---|---|---|
-| `GET` | `/api/health` | Cached health check for Groq and Hindsight connectivity | Public |
-| `GET` | `/` | API status and root greeting | Public |
+1. **Act 1: First Phishing Incident (Memory Off)**
+   - Toggle **Memory: Off** in the composer.
+   - Send: `"Finance user opened invoice_7482.docm and PowerShell executed on FIN-WS-042 connecting to 198.51.100.45"`
+   - Result: Standard generic containment advice. No past memory is recalled or saved (`is_baseline: true`).
+2. **Act 2: Similar Incident (Memory On)**
+   - Toggle **Memory: On**.
+   - Send: `"Another Finance endpoint FIN-WS-067 observed PowerShell executing and beaconing to 198.51.100.45"`
+   - Result: The assistant recalls the earlier incident, highlights the shared C2 IP `198.51.100.45`, links the campaign across Finance endpoints, and suggests containment based on organizational history.
+3. **Act 3: Grounded History Inquiry**
+   - Ask: `"What worked last time for phishing in Finance?"` or `"Have we seen 198.51.100.45 before?"`
+   - Result: Answer is synthesized strictly from recalled memories. Click **Used N memories** to inspect the real Hindsight document IDs, text snippets, and relevance scores.
+4. **Act 4: Teaching Feedback**
+   - Send: `"Remember that FIN-WS-042 is the CFO's laptop, treat as high priority"`
+   - Result: The assistant confirms and retains the note into Hindsight. Subsequent investigations for that host reflect this context.
 
 ---
 
-## 🎬 Deterministic 60-Second Demo Script
+## 📡 API Endpoints
 
-To experience CyberHinsight in action:
+### Chat System
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/chat` | Non-streaming chat endpoint returning complete `ChatResponse` |
+| `POST` | `/api/chat/stream` | Server-Sent Events (SSE) streaming `status`, `token`, and `final` events |
+| `GET` | `/api/chat` | List recent conversations with titles and timestamps |
+| `GET` | `/api/chat/{id}` | Get messages for a specific conversation |
+| `DELETE` | `/api/chat/{id}` | Delete a conversation |
 
-1. **Cold Start**: Click **"Fresh Cold Start"** on the Investigation Console. This initializes an empty memory bank (`cyberhinsight-demo-<timestamp>`).
-2. **Act 1 (Baseline)**: Select **Act 1** (`FIN-WS-042` phishing with `198.51.100.45`). Click **"Investigate Incident"**:
-   - The agent performs initial extraction.
-   - Hindsight reports: *"First Incident of this Pattern (Baseline Memory)"*.
-   - Click **"Effective"** on the outcome feedback bar to record that host isolation succeeded.
-3. **Act 2 (Recall & Campaign Link)**: Select **Act 2** (`FIN-WS-088` secondary attack in same `198.51.100.0/24` subnet). Click **"Investigate Incident"**:
-   - The cyan **Hindsight Historical Recall** card highlights `DEMO-001` with an empirical relevance score (e.g. `Score: 0.87 · Rank #1`).
-   - The **Adversary Campaign Correlated** panel highlights `CMP-19851100`, linking 2 Finance endpoints across the shared subnet.
-   - Recommendations adapt dynamically from individual host blocking to a **perimeter subnet block**.
-4. **Before vs. After View**: Click **"⚡ Before / After Memory Comparison"** to see a side-by-side comparison proving how Hindsight memory eliminates generic steps.
-5. **Learning Curve**: Open the **Agent Learning Curve** tab and click **"Run 6-Incident Sequence"** to view the empirical line chart tracking specificity scores from 2.5 to 8.5/10.
+### Incident Triage & Memory
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/incidents/investigate` | Full pipeline investigation (triage, IOC extraction, campaign linking) |
+| `POST` | `/api/incidents/{id}/feedback` | Record containment feedback (effective/ineffective) to Hindsight |
+| `GET` | `/api/incidents/history` | Auditable history of past investigated incidents |
+| `GET` | `/api/memory/playbook` | Synthesized organizational playbook from Hindsight `areflect()` |
+| `POST` | `/api/memory/search` | Direct semantic search across the Hindsight memory bank |
+| `POST` | `/api/demo/new-session` | Initialize a fresh memory bank session for isolated testing |
+| `GET` | `/api/health` | Service health status for FastAPI, Groq, and Hindsight |
 
 ---
 
-## 🧪 Automated Test Suite
+## 🧪 Running Tests
 
-CyberHinsight includes 14 unit tests with zero external network dependencies using test doubles (`FakeLLM` and `FakeMemory`):
+All unit tests run completely offline using fakes and mocks (no live API keys or external network calls required):
 
 ```bash
-# Run all tests
+# Run backend test suite
 cd backend
-.venv/Scripts/python -m pytest -q tests
+pytest -q tests
+
+# Run frontend build check
+cd ../frontend
+npm run build
 ```
 
-### Verified Test Cases:
-1. `test_no_retain_on_llm_failure`: When LLM analysis fails, Hindsight `retain` is never called and API returns HTTP 502.
-2. `test_recall_influences_prompt`: Memory-aware prompts include recalled context in `<memory>` tags; memory-off prompts omit them.
-3. `test_baseline_does_not_retain_or_recall`: `use_memory=False` skips both recall and retain.
-4. `test_successful_investigation_retains_structured_memory`: Retained records include stable `document_id`, tags, and IOCs.
-5. `test_ioc_extractor`: Deterministic extraction of IPv4, /24 CIDRs, domains, SHA256/MD5 hashes, and hostnames.
-6. `test_campaign_linking_exact_ip_strong`: Exact IP matches produce strong campaign links (`CMP-xxxxxxxx`).
-7. `test_campaign_linking_subnet_moderate`: /24 subnet overlap produces moderate campaign links.
-8. `test_campaign_linking_unrelated_none`: Unrelated incidents produce no campaign link.
-9. `test_escalation_prediction_grounded`: Predicts ransomware escalation based on memory evidence.
-10. `test_feedback_retains_outcome_doc`: Submitting feedback creates an `outcome` document in Hindsight.
-11. `test_webhook_normalisation`: SIEM alerts normalize to standard investigation descriptions.
-12. `test_auth_rejection_when_key_configured`: Rejects unauthenticated requests with HTTP 401 when `APP_API_KEY` is set.
-13. `test_oversize_input_rejected`: Descriptions exceeding `MAX_INCIDENT_CHARS` return HTTP 422.
-14. `test_empty_description_rejected`: Empty inputs return HTTP 422.
+---
+
+## ⚖️ Safety, Scope & Honest Limitations
+
+* **Defensive Purpose Only**: CyberHinsight is designed exclusively for SOC defense, triage, containment analysis, and historical inquiry. It does not generate exploits or offensive malware.
+* **Synthetic Test Telemetry**: Incident demonstrations use synthetic IP addresses strictly within RFC 5737 test ranges (`198.51.100.0/24`, `203.0.113.0/24`) and private RFC 1918 networks.
+* **Strict Grounding Boundaries**: Historical Q&A is strictly bound by recalled memories. If an incident or host is not in memory, the assistant explicitly states it has no record of it.
+* **Context Truncation**: Chat history sent to LLM prompts is capped at the last 20 turns to prevent context exhaustion.
 
 ---
 
-## 🔒 Defensive Security & Ethics Statement
-
-CyberHinsight is strictly a **defensive incident-response tool**:
-- It contains **no offensive capabilities**, exploit modules, or malware generation functionality.
-- All IP addresses in sample datasets utilize reserved documentation blocks specified in **RFC 5737** (`192.0.2.0/24`, `198.51.100.0/24`, `203.0.113.0/24`).
-- All telemetry, hostnames, and user identities are 100% synthetic.
-
----
-
-## 📄 License
-
-Apache 2.0 License.
+Powered by [Hindsight](https://hindsight.vectorize.io) & [Groq](https://groq.com).
