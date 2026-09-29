@@ -5,6 +5,10 @@ import sys
 import httpx
 from pathlib import Path
 
+# Ensure UTF-8 output on Windows consoles
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+
 
 def main():
     base_url = os.environ.get("CYBERHINSIGHT_URL", "http://127.0.0.1:8000")
@@ -35,7 +39,7 @@ def main():
             )
             if r.status_code == 200:
                 data = r.json()
-                print(f"  ✓ Investigated: {data.get('incident', {}).get('summary', 'N/A')}")
+                print(f"  [OK] Investigated: {data.get('incident', {}).get('summary', 'N/A')}")
                 print(f"    Severity: {data.get('incident', {}).get('severity', 'N/A')}")
                 print(f"    Memory matches: {len(data.get('memory_matches', []))}")
                 campaign = data.get("campaign_link")
@@ -43,9 +47,9 @@ def main():
                     print(f"    Campaign: {campaign.get('campaign_id')} ({campaign.get('link_strength')})")
                 print(f"    Stored: {data.get('memory_stored', False)}")
             else:
-                print(f"  ✗ HTTP {r.status_code}: {r.text[:200]}")
+                print(f"  [FAIL] HTTP {r.status_code}: {r.text[:200]}")
         except Exception as e:
-            print(f"  ✗ Error: {e}")
+            print(f"  [ERROR] Error: {e}")
         print()
 
 

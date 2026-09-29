@@ -1,7 +1,10 @@
 """Smoke test: verify CyberHinsight backend is working end-to-end."""
-import os
 import sys
 import httpx
+
+# Ensure UTF-8 output on Windows consoles
+if hasattr(sys.stdout, 'reconfigure'):
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 
 def main():
@@ -9,7 +12,7 @@ def main():
     api_key = os.environ.get("APP_API_KEY", "")
     headers = {"X-API-Key": api_key} if api_key else {}
 
-    print(f"CyberHinsight Smoke Test → {base_url}\n")
+    print(f"CyberHinsight Smoke Test -> {base_url}\n")
 
     # 1. Health check
     print("1. Health check...")
@@ -80,7 +83,7 @@ def main():
         print(f"   Escalation prediction: {escalation['predicted_next_stage']}")
     print(f"   Why: {d2['recommendations'].get('why_these_recommendations', '')[:200]}")
 
-    print("\n✅ Smoke test passed!")
+    print("\n[OK] Smoke test passed!")
 
 
 if __name__ == "__main__":
