@@ -1,0 +1,67 @@
+[
+  {
+    "source": "sentinel",
+    "rule_name": "Suspicious PowerShell spawned by Office application",
+    "severity": "critical",
+    "host": "FIN-WS-042",
+    "user": "j.martinez",
+    "department": "Finance",
+    "src_ip": "10.10.4.22",
+    "dst_ip": "198.51.100.45",
+    "process_tree": "WINWORD.EXE > powershell.exe -ep bypass -w hidden -enc aQBlAHgA...",
+    "timestamp": "2026-09-25T14:30:00Z",
+    "raw": "EventID=4688 ProcessName=powershell.exe ParentProcess=WINWORD.EXE CommandLine=\"powershell.exe -ep bypass -w hidden\" User=CORP\\j.martinez"
+  },
+  {
+    "source": "crowdstrike",
+    "rule_name": "Credential harvesting attempt detected",
+    "severity": "critical",
+    "host": "EXEC-WS-002",
+    "user": "s.chen",
+    "department": "Executive",
+    "src_ip": "10.10.1.5",
+    "dst_ip": "203.0.113.88",
+    "process_tree": "chrome.exe > credential-form-submit",
+    "timestamp": "2026-09-20T11:20:00Z",
+    "raw": "Detection: CredentialHarvest Host=EXEC-WS-002 User=s.chen URL=https://login-secure-0365.com/auth"
+  },
+  {
+    "source": "splunk",
+    "rule_name": "Ransomware behavior - Volume shadow copy deletion",
+    "severity": "critical",
+    "host": "FIN-WS-012",
+    "user": "r.thompson",
+    "department": "Finance",
+    "src_ip": "10.10.4.55",
+    "dst_ip": "198.51.100.50",
+    "process_tree": "WINWORD.EXE > powershell.exe > cmd.exe > vssadmin.exe delete shadows /all /quiet",
+    "timestamp": "2026-09-26T09:45:00Z",
+    "raw": "vssadmin.exe delete shadows /all /quiet && ren *.docx *.docx.crypt"
+  },
+  {
+    "source": "sentinel",
+    "rule_name": "Lateral movement via SMB Pass-the-Hash",
+    "severity": "high",
+    "host": "ENG-WS-210",
+    "user": "d.kim",
+    "department": "Engineering",
+    "src_ip": "10.10.8.210",
+    "dst_ip": "10.10.8.0/24",
+    "process_tree": "cmd.exe > net use \\\\10.10.8.15\\C$ /user:admin",
+    "timestamp": "2026-09-08T14:40:00Z",
+    "raw": "Multiple SMB connections to administrative shares from ENG-WS-210 using NTLM hashes"
+  },
+  {
+    "source": "generic",
+    "rule_name": "DNS tunneling detected - high volume TXT queries",
+    "severity": "medium",
+    "host": "ENG-WS-155",
+    "user": "a.patel",
+    "department": "Engineering",
+    "src_ip": "10.10.8.155",
+    "dst_ip": "",
+    "process_tree": "svchost.exe > dns-query update-chk-sys.com TXT",
+    "timestamp": "2026-08-25T13:10:00Z",
+    "raw": "IDS Alert: 847 TXT queries to update-chk-sys.com in 60 seconds from ENG-WS-155"
+  }
+]

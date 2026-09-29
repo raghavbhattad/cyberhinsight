@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { investigateIncident } from '../services/api';
+import { useSearchParams, Link } from 'react-router-dom';
+import { 
+  investigateIncident, 
+  submitFeedback, 
+  startNewDemoSession 
+} from '../services/api';
 import LoadingSpinner from '../components/LoadingSpinner';
 import MemoryCard from '../components/MemoryCard';
 import { StatusBadge } from '../components/StatusBadge';
@@ -21,7 +25,13 @@ import {
   Sparkles,
   RefreshCw,
   Cpu,
-  Crosshair
+  Crosshair,
+  TrendingUp,
+  ThumbsUp,
+  ThumbsDown,
+  AlertTriangle,
+  Network,
+  Radio
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
@@ -30,22 +40,22 @@ const DEMO_ACTS = [
     act: 'ACT 1',
     badge: 'FIRST INCIDENT · BASELINE',
     title: 'Phishing + PowerShell (FIN-WS-042)',
-    desc: 'Employee clicks invoice.docm. PowerShell beacons to external IP 203.0.113.45. No prior memory exists in Hindsight.',
-    text: "Finance department employee received a suspicious email with an attachment. Upon opening, PowerShell was observed executing on the endpoint FIN-WS-042. The process spawned cmd.exe and attempted to download files from an external IP 203.0.113.45. Credentials for the user account may have been compromised."
+    desc: 'Employee clicks invoice_7482.docm. PowerShell beacons to external IP 198.51.100.45. No prior memory exists in Hindsight.',
+    text: "At 14:30Z, a user in Finance reported a suspicious email masquerading as a vendor invoice. The user downloaded and opened the attached 'invoice_7482.docm' file, which executed a PowerShell script upon enabling macros. The script attempted to harvest credentials and beaconed out to a suspicious IP (198.51.100.45) on endpoint FIN-WS-042."
   },
   {
     act: 'ACT 2',
     badge: 'SECOND INCIDENT · HINDSIGHT RECALL',
-    title: 'Secondary Subnet Attack (FIN-WS-067)',
-    desc: 'Another Finance workstation encounters the same campaign. Hindsight recalls FIN-WS-042 and generates an adapted subnet block.',
-    text: "Another Finance employee on endpoint FIN-WS-067 reported a suspicious email. Similar PowerShell activity detected. Connection attempts to IP range 203.0.113.0/24 observed. Employee had access to financial reporting systems."
+    title: 'Secondary Subnet Attack (FIN-WS-088)',
+    desc: 'Another Finance workstation encounters the same campaign. Hindsight recalls FIN-WS-042, links campaign, and generates an adapted subnet block.',
+    text: "Another Finance endpoint FIN-WS-088 exhibited suspicious behavior shortly after the initial incident. A PowerShell process (powershell.exe -ep bypass -w hidden) was spawned by Microsoft Word, indicating another successful phishing payload execution. The process established a connection to external IP 198.51.100.48 (same /24 subnet). Employee had access to financial reporting systems."
   },
   {
     act: 'ACT 3',
     badge: 'ACT 3 · ESCALATED THREAT',
-    title: 'Ransomware Mutation (HR-WS-015)',
-    desc: 'Mutated macro campaign attempting volume shadow copy deletion and .encrypted extension changes.',
-    text: "IT detected unusual file encryption activity on endpoint HR-WS-015 in the Human Resources department. Multiple files being renamed with .encrypted extension. Process tree shows origin from a macro-enabled document received via email."
+    title: 'Ransomware Mutation (FIN-WS-012)',
+    desc: 'Escalated variant of the phishing payload modifying file extensions to .crypt and deleting shadow copies. Grounded in campaign memory.',
+    text: "An escalated variant of the previous phishing payload was executed on a third Finance machine FIN-WS-012. After initial execution, the malware began modifying file extensions to '.crypt' and attempting to delete volume shadow copies via vssadmin.exe. Connections to command and control server at 198.51.100.50 were observed."
   }
 ];
 
@@ -54,14 +64,15 @@ const Investigate = () => {
   const [description, setDescription] = useState('');
   const [useMemory, setUseMemory] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState(1);
-  const [loadingPhase, setLoadingPhase] = useState('');
   const [result, setResult] = useState(null);
   const [baselineResult, setBaselineResult] = useState(null);
   const [comparing, setComparing] = useState(false);
   const [viewMode, setViewMode] = useState('standard'); // 'standard' | 'comparison'
   const [error, setError] = useState(null);
   const [activeDemoAct, setActiveDemoAct] = useState(null);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  const [sessionMessage, setSessionMessage] = useState('');
 
   // Auto-load Act 1 if ?demo=true in URL
   useEffect(() => {
@@ -76,7 +87,7 @@ const Investigate = () => {
     setResult(null);
     setBaselineResult(null);
     setViewMode('standard');
-    setCurrentStep(1);
+    setFeedbackSubmitted(null);
   };
 
   const handleInvestigate = async (e) => {
@@ -88,40 +99,18 @@ const Investigate = () => {
     setBaselineResult(null);
     setViewMode('standard');
     setError(null);
-    setCurrentStep(2);
-    
+    setFeedbackSubmitted(null);
+
     try {
-      setLoadingPhase('Step 2/6: Extracting threat entities & MITRE ATT&CK techniques with Groq LLM...');
-      
-      const stepTimer1 = setTimeout(() => {
-        if (useMemory) {
-          setCurrentStep(3);
-          setLoadingPhase('Step 3/6: Querying Hindsight Cloud Vector Memory for historical incidents...');
-        }
-      }, 1200);
-
-      const stepTimer2 = setTimeout(() => {
-        if (useMemory) {
-          setCurrentStep(4);
-          setLoadingPhase('Step 4/6: Synthesizing historical resolutions & organizational precedents...');
-        }
-      }, 2400);
-
       const res = await investigateIncident(description, useMemory);
-      clearTimeout(stepTimer1);
-      clearTimeout(stepTimer2);
-
-      setCurrentStep(5);
-      setLoadingPhase('Step 5/6: Generating memory-informed containment actions...');
-      
       setResult(res.data);
-      setCurrentStep(6);
     } catch (err) {
-      setError(err.response?.data?.detail || 'An error occurred during incident investigation.');
-      setCurrentStep(1);
+      setError(
+        err.response?.data?.detail || 
+        'An error occurred during incident investigation. Check backend connection.'
+      );
     } finally {
       setLoading(false);
-      setLoadingPhase('');
     }
   };
 
@@ -137,9 +126,46 @@ const Investigate = () => {
       setBaselineResult(res.data);
       setViewMode('comparison');
     } catch (err) {
-      console.error('Comparison error:', err);
+      setError('Comparison failed: ' + (err.response?.data?.detail || err.message));
     } finally {
       setComparing(false);
+    }
+  };
+
+  const handleFeedback = async (outcome) => {
+    if (!result?.id) return;
+    setFeedbackLoading(true);
+    try {
+      const payload = {
+        outcome,
+        actions_taken: result.recommendations?.immediate_actions || [],
+        what_worked: outcome === 'effective' ? 'Recommendations were successful' : '',
+        what_failed: outcome === 'ineffective' ? 'Recommended action failed to contain threat' : '',
+        analyst_notes: `Analyst feedback submitted via SOC Console for incident ${result.id}`,
+      };
+      await submitFeedback(result.id, payload);
+      setFeedbackSubmitted(outcome);
+    } catch (err) {
+      console.error('Feedback submission error:', err);
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
+  const handleStartFreshSession = async () => {
+    setLoading(true);
+    try {
+      const res = await startNewDemoSession();
+      setSessionMessage(`Cold start initialized: ${res.data.bank_id}. Memory is clean.`);
+      setResult(null);
+      setBaselineResult(null);
+      setActiveDemoAct(null);
+      setDescription('');
+      setTimeout(() => setSessionMessage(''), 5000);
+    } catch (err) {
+      setError('Could not start fresh session: ' + err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -164,62 +190,44 @@ const Investigate = () => {
           </p>
         </div>
 
-        {/* Status Indicator */}
-        <div className="flex items-center gap-2 font-mono text-xs text-secondary bg-input px-3 py-1.5 rounded-md border border-subtle">
-          <Brain size={14} className="text-cyan" />
-          <span>Hindsight Recall: <strong className="text-cyan">{useMemory ? 'ACTIVE' : 'DISABLED'}</strong></span>
+        {/* Top Controls */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={handleStartFreshSession}
+            disabled={loading}
+            title="Create a fresh isolated memory bank for a clean demo"
+          >
+            <RefreshCw size={13} />
+            <span>Fresh Cold Start</span>
+          </button>
+
+          <div className="flex items-center gap-2 font-mono text-xs text-secondary bg-input px-3 py-1.5 rounded-md border border-subtle">
+            <Brain size={14} className="text-cyan" />
+            <span>Hindsight Recall: <strong className="text-cyan">{useMemory ? 'ACTIVE' : 'DISABLED'}</strong></span>
+          </div>
         </div>
       </div>
 
-      {/* 6-Step Visual Timeline / Progress Stepper (Requirement #3) */}
-      <div className="stepper-container">
-        <div className={`step-item ${currentStep === 1 ? 'active' : currentStep > 1 ? 'completed' : ''}`}>
-          <div className="step-number">{currentStep > 1 ? '✓' : '1'}</div>
-          <span>Alert Ingestion</span>
+      {sessionMessage && (
+        <div className="card p-3 border-l-4 border-l-cyan-400 bg-cyan-950/20 text-cyan-300 text-xs font-mono flex items-center gap-2">
+          <Sparkles size={14} className="flex-shrink-0" />
+          <span>{sessionMessage}</span>
         </div>
-        <span className="step-arrow">➔</span>
+      )}
 
-        <div className={`step-item ${currentStep === 2 ? 'active' : currentStep > 2 ? 'completed' : ''}`}>
-          <div className="step-number">{currentStep > 2 ? '✓' : '2'}</div>
-          <span>AI Extraction</span>
-        </div>
-        <span className="step-arrow">➔</span>
-
-        <div className={`step-item ${currentStep === 3 ? 'active' : currentStep > 3 ? 'completed' : ''}`}>
-          <div className="step-number">{currentStep > 3 ? '✓' : '3'}</div>
-          <span>Hindsight Recall</span>
-        </div>
-        <span className="step-arrow">➔</span>
-
-        <div className={`step-item ${currentStep === 4 ? 'active' : currentStep > 4 ? 'completed' : ''}`}>
-          <div className="step-number">{currentStep > 4 ? '✓' : '4'}</div>
-          <span>Precedents Found</span>
-        </div>
-        <span className="step-arrow">➔</span>
-
-        <div className={`step-item ${currentStep === 5 ? 'active' : currentStep > 5 ? 'completed' : ''}`}>
-          <div className="step-number">{currentStep > 5 ? '✓' : '5'}</div>
-          <span>Adaptive Defense</span>
-        </div>
-        <span className="step-arrow">➔</span>
-
-        <div className={`step-item ${currentStep === 6 ? 'completed' : ''}`}>
-          <div className="step-number">{currentStep === 6 ? '✓' : '6'}</div>
-          <span>Memory Retained</span>
-        </div>
-      </div>
-
-      {/* Interactive Hackathon Demo Bar (Requirement #9) */}
+      {/* Interactive Demo Story Bar */}
       <div className="card p-4 border-cyan" style={{ background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.05) 0%, rgba(14, 21, 38, 0.9) 100%)' }}>
         <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
           <div className="flex items-center gap-2">
             <Sparkles size={16} className="text-cyan" />
             <span className="text-xs font-bold uppercase tracking-wider text-cyan">
-              Deterministic Hackathon Demo Sequence (1-Minute Story)
+              Deterministic 60-Second Demo Sequence
             </span>
           </div>
           <span className="text-xs text-muted font-mono">
-            Click Act 1 ➔ Investigate ➔ Then click Act 2 to prove Hindsight recall!
+            Click Act 1 ➔ Investigate ➔ Then Act 2 to prove Hindsight recall & campaign correlation!
           </span>
         </div>
 
@@ -282,49 +290,52 @@ const Investigate = () => {
             disabled={loading || !description.trim()}
           >
             {loading ? <RefreshCw className="animate-spin" size={16} /> : <Crosshair size={16} />}
-            <span>{loading ? 'Investigating...' : 'Investigate Incident'}</span>
+            <span>{loading ? 'Investigating with Groq & Hindsight...' : 'Investigate Incident'}</span>
           </button>
         </div>
       </div>
 
-      {/* Loading State with Phase Description */}
+      {/* Honest Loading State */}
       {loading && (
         <div className="card p-10 flex flex-col items-center justify-center text-center">
-          <LoadingSpinner message={loadingPhase} />
+          <LoadingSpinner message="Querying Groq LLM & Hindsight Vector Memory Bank..." />
           <p className="text-xs font-mono text-cyan mt-3 animate-pulse">
-            Neural pipeline active · Connecting Groq Inference + Hindsight Vector Bank
+            Neural pipeline active · Extracting IOCs, recalling historical precedents, and correlating campaigns
           </p>
         </div>
       )}
 
       {/* Error Banner */}
       {error && (
-        <div className="card error-state p-4 flex items-start gap-3">
-          <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
+        <div className="card error-state p-4 flex items-start gap-3 border-red-500/50 bg-red-950/20">
+          <AlertCircle size={20} className="flex-shrink-0 mt-0.5 text-red-400" />
           <div>
-            <h4 className="font-bold text-sm mb-1">Investigation Execution Error</h4>
-            <p className="text-xs font-mono">{error}</p>
+            <h4 className="font-bold text-sm mb-1 text-red-400">Investigation Error</h4>
+            <p className="text-xs font-mono text-secondary">{error}</p>
           </div>
         </div>
       )}
 
       {/* Results Section */}
       {result && !loading && (
-        <div className="results-section">
-          {/* Memory Retain Success Banner */}
-          {result.memory_stored && (
-            <div className="success-banner">
-              <CheckCircle2 size={18} className="flex-shrink-0" />
-              <span>
-                <strong>Persistent Intelligence Logged:</strong> This incident investigation and containment outcome have been securely stored in Hindsight memory bank <code className="font-mono text-xs bg-black/30 px-1 py-0.5 rounded">cyberhinsight</code>.
-              </span>
-            </div>
-          )}
+        <div className="results-section flex flex-col gap-6">
+          {/* Top Status & Retain Banner */}
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            {result.memory_stored ? (
+              <div className="success-banner flex-grow">
+                <CheckCircle2 size={16} className="flex-shrink-0" />
+                <span>
+                  <strong>Memory Indexed ✓</strong> Retained into Hindsight bank as <code className="font-mono text-xs bg-black/40 px-1 py-0.5 rounded">{result.id.substring(0, 8)}...</code> with structured tags and IOCs.
+                </span>
+              </div>
+            ) : (
+              <div className="tag text-xs text-muted font-mono">
+                Memory retention disabled for this investigation
+              </div>
+            )}
 
-          {/* Mode Switcher: Comprehensive vs Live Before/After Comparison */}
-          <div className="flex items-center justify-between flex-wrap gap-3 p-3 bg-secondary border border-color rounded-lg">
+            {/* Mode Switcher */}
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-secondary uppercase tracking-wider">Analysis Mode:</span>
               <button 
                 type="button" 
                 className={`btn btn-sm ${viewMode === 'standard' ? 'btn-primary' : 'btn-secondary'}`}
@@ -340,19 +351,145 @@ const Investigate = () => {
                 style={viewMode === 'comparison' ? { backgroundColor: 'var(--accent-cyan)', color: '#000' } : {}}
               >
                 <Zap size={14} />
-                {comparing ? 'Synthesizing Baseline...' : '⚡ Before / After Memory Comparison'}
+                {comparing ? 'Generating Baseline...' : '⚡ Before / After Memory Comparison'}
               </button>
             </div>
-            
-            {result.recommendations.adapted_from_memory && (
-              <span className="badge badge-memory" style={{ gap: '0.4rem' }}>
-                <Brain size={14} />
-                <span>Hindsight Intelligence Active ({result.memory_matches?.length || 0} Matches)</span>
-              </span>
-            )}
           </div>
 
-          {/* Comparison Mode: Live Side-by-Side (Requirement #7) */}
+          {/* Campaign Correlation Panel (Phase 3 Innovation) */}
+          {result.campaign_link && (
+            <div className="card p-4 border-cyan" style={{ background: 'linear-gradient(135deg, rgba(0, 240, 255, 0.08) 0%, rgba(14, 21, 38, 0.95) 100%)' }}>
+              <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Network size={16} className="text-cyan" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-cyan">
+                    Adversary Campaign Correlated
+                  </span>
+                  <span className={`badge ${result.campaign_link.link_strength === 'strong' ? 'badge-critical' : 'badge-high'}`}>
+                    {result.campaign_link.link_strength.toUpperCase()} LINK
+                  </span>
+                </div>
+                <span className="font-mono text-xs text-cyan font-bold">
+                  CAMPAIGN ID: {result.campaign_link.campaign_id}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs font-mono mt-3">
+                <div className="p-2 rounded bg-input border border-subtle">
+                  <span className="text-muted block text-[0.65rem] uppercase">Linked Incidents</span>
+                  <span className="text-primary font-bold">{result.campaign_link.incident_count} incidents</span>
+                </div>
+                <div className="p-2 rounded bg-input border border-subtle">
+                  <span className="text-muted block text-[0.65rem] uppercase">Departments</span>
+                  <span className="text-primary font-bold">
+                    {result.campaign_link.departments_touched?.join(', ') || 'Finance'}
+                  </span>
+                </div>
+                <div className="p-2 rounded bg-input border border-subtle col-span-2">
+                  <span className="text-muted block text-[0.65rem] uppercase">Shared Infrastructure (IOCs)</span>
+                  <span className="text-cyan font-bold">
+                    {result.campaign_link.shared_iocs?.join(', ') || '198.51.100.0/24'}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Escalation Prediction Warning (Phase 3 Innovation) */}
+          {result.predicted_escalation && (
+            <div className="card p-4 border-amber-500/50 bg-amber-950/20">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-amber-400" />
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-400">
+                    Escalation Forecast · Grounded in Memory
+                  </span>
+                </div>
+                <span className="tag text-[0.65rem] font-mono text-amber-300">
+                  Confidence: {result.predicted_escalation.confidence}
+                </span>
+              </div>
+              <p className="text-xs text-primary mb-2 font-medium">
+                <strong>Predicted Next Stage:</strong> {result.predicted_escalation.predicted_next_stage}
+              </p>
+              <div className="p-2.5 rounded bg-input text-xs text-amber-200 border border-amber-500/30">
+                <span className="font-bold block text-[0.68rem] uppercase mb-0.5 text-amber-400">
+                  Preventive Containment Action:
+                </span>
+                {result.predicted_escalation.preventive_action}
+              </div>
+            </div>
+          )}
+
+          {/* Outcome Learning Feedback Bar (Phase 2 Star Feature) */}
+          <div className="card p-4 border-subtle flex items-center justify-between flex-wrap gap-3 bg-bg-card">
+            <div className="flex items-center gap-2">
+              <Brain size={16} className="text-cyan" />
+              <div>
+                <span className="text-xs font-bold text-primary block">
+                  Analyst Outcome Feedback (Learning Signal)
+                </span>
+                <span className="text-[0.7rem] text-secondary">
+                  Rate this containment outcome to train Hindsight on what works in this organization:
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {feedbackSubmitted ? (
+                <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-mono font-bold bg-emerald-950/40 px-3 py-1.5 rounded border border-emerald-500/40">
+                  <CheckCircle2 size={14} />
+                  <span>Feedback Recorded ({feedbackSubmitted.toUpperCase()}) → Hindsight Updated</span>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    style={{ background: 'rgba(16, 185, 129, 0.15)', borderColor: '#10b981', color: '#10b981' }}
+                    onClick={() => handleFeedback('effective')}
+                    disabled={feedbackLoading}
+                  >
+                    <ThumbsUp size={12} />
+                    <span>Effective</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    style={{ background: 'rgba(234, 179, 8, 0.15)', borderColor: '#eab308', color: '#eab308' }}
+                    onClick={() => handleFeedback('partially_effective')}
+                    disabled={feedbackLoading}
+                  >
+                    <span>Partially Effective</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    style={{ background: 'rgba(239, 68, 68, 0.15)', borderColor: '#ef4444', color: '#ef4444' }}
+                    onClick={() => handleFeedback('ineffective')}
+                    disabled={feedbackLoading}
+                  >
+                    <ThumbsDown size={12} />
+                    <span>Ineffective</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn btn-sm"
+                    style={{ background: 'rgba(56, 189, 248, 0.15)', borderColor: '#38bdf8', color: '#38bdf8' }}
+                    onClick={() => handleFeedback('false_positive')}
+                    disabled={feedbackLoading}
+                  >
+                    <span>False Positive</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Comparison Mode: Side-by-Side (Phase 5 Hero) */}
           {viewMode === 'comparison' && baselineResult ? (
             <div className="card p-6 border-cyan">
               <div className="flex items-center justify-between mb-4 pb-3 border-b flex-wrap gap-2" style={{ borderColor: 'var(--border-color)' }}>
@@ -361,7 +498,7 @@ const Investigate = () => {
                   <h3 className="text-lg font-bold text-primary">Live Before vs. After Memory Comparison</h3>
                 </div>
                 <span className="text-xs text-secondary font-mono bg-input px-3 py-1 rounded border border-subtle">
-                  Same Security Alert Evaluated With & Without Hindsight
+                  Same Incident Evaluated With & Without Hindsight
                 </span>
               </div>
 
@@ -373,7 +510,7 @@ const Investigate = () => {
                       <span className="pulse-dot critical"></span>
                       WITHOUT MEMORY (Generic Playbook)
                     </span>
-                    <span className="badge badge-critical" style={{ fontSize: '0.65rem' }}>Standard Baseline</span>
+                    <span className="badge badge-critical" style={{ fontSize: '0.65rem' }}>Control Baseline</span>
                   </div>
 
                   <div>
@@ -381,13 +518,13 @@ const Investigate = () => {
                       Hindsight Recall Context:
                     </span>
                     <div className="text-xs text-muted italic bg-bg-card p-3 rounded border border-dashed border-gray-700">
-                      Zero historical context available. The agent analyzes the incident in complete isolation without knowledge of previous attacks on this subnet.
+                      Zero historical context. The agent analyzes this incident in complete isolation without knowledge of previous attacks on this subnet.
                     </div>
                   </div>
 
                   <div>
                     <span className="text-xs font-semibold text-muted block mb-1 uppercase tracking-wider font-mono">
-                      Standard Playbook Immediate Actions:
+                      Generic Immediate Actions:
                     </span>
                     <ul className="action-list text-xs text-secondary">
                       {baselineResult.recommendations.immediate_actions.map((act, i) => (
@@ -399,7 +536,7 @@ const Investigate = () => {
                   <div className="mt-auto pt-3 border-t border-gray-800">
                     <span className="text-[0.68rem] font-semibold text-muted block mb-1 uppercase font-mono">Decision Basis:</span>
                     <p className="text-xs text-muted italic">
-                      Standard generic playbook for {baselineResult.incident.category}. Missing recurring attacker IP range awareness.
+                      Standard generic playbook for {baselineResult.incident.category}. Missing campaign awareness and organizational history.
                     </p>
                   </div>
                 </div>
@@ -422,12 +559,14 @@ const Investigate = () => {
                       {result.memory_matches && result.memory_matches.length > 0 ? (
                         result.memory_matches.map((m, i) => (
                           <div key={i} className="mb-2 last:mb-0 pb-2 border-b border-gray-800 last:border-b-0">
-                            <span className="font-semibold text-cyan font-mono text-[0.7rem]">Memory #{i+1}: </span>
-                            <span className="text-secondary text-xs">{m.text}</span>
+                            <span className="font-semibold text-cyan font-mono text-[0.7rem]">
+                              #{m.rank || i+1} {m.score ? `(Score: ${m.score.toFixed(2)})` : ''}: 
+                            </span>
+                            <span className="text-secondary text-xs ml-1">{m.text}</span>
                           </div>
                         ))
                       ) : (
-                        <span className="text-muted italic">No prior matches found.</span>
+                        <span className="text-muted italic">First incident of this pattern (baseline memory).</span>
                       )}
                     </div>
                   </div>
@@ -457,10 +596,9 @@ const Investigate = () => {
           ) : (
             /* Comprehensive SOC Results Grid */
             <div className="results-grid">
-              {/* Left Column: Summary + Hindsight Memories */}
+              {/* Left Column: Telemetry + Hindsight Memory */}
               <div className="flex flex-col gap-6">
-                
-                {/* Incident Summary Card */}
+                {/* Incident Telemetry Card */}
                 <div className="card">
                   <div className="section-title">
                     <FileText size={15} /> Security Incident Telemetry
@@ -498,17 +636,19 @@ const Investigate = () => {
                   
                   {result.incident.indicators && result.incident.indicators.length > 0 && (
                     <div className="mt-4">
-                      <span className="text-muted block text-[0.68rem] uppercase font-mono mb-2">Indicators of Compromise (IoCs)</span>
+                      <span className="text-muted block text-[0.68rem] uppercase font-mono mb-2">
+                        Indicators of Compromise (IoCs) — {result.incident.indicators.length} Extracted
+                      </span>
                       <div className="flex flex-wrap gap-2">
                         {result.incident.indicators.map((ioc, i) => (
-                          <span key={i} className="tag">{ioc}</span>
+                          <span key={i} className="tag font-mono text-[0.7rem]">{ioc}</span>
                         ))}
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Hindsight Memory Card (Visual Centerpiece) */}
+                {/* Hindsight Persistent Memory Card (Centerpiece) */}
                 <div className="card border-cyan" style={{ background: 'linear-gradient(145deg, rgba(0, 240, 255, 0.05) 0%, rgba(14, 21, 38, 0.95) 100%)' }}>
                   <div className="section-title text-cyan" style={{ color: 'var(--accent-cyan)' }}>
                     <Brain size={16} /> 
@@ -527,7 +667,7 @@ const Investigate = () => {
                   ) : result.memory_matches && result.memory_matches.length > 0 ? (
                     <div className="flex flex-col gap-3">
                       <p className="text-xs text-cyan font-mono mb-1">
-                        ✓ Semantic vector search matched previous investigations in this memory bank:
+                        ✓ Semantic vector recall retrieved historical precedents with empirical scores:
                       </p>
                       {result.memory_matches.map((match, i) => (
                         <MemoryCard key={i} memory={match} />
@@ -543,9 +683,8 @@ const Investigate = () => {
                 </div>
               </div>
 
-              {/* Right Column: AI Analysis & Recommendations */}
+              {/* Right Column: AI Analysis & Recommended Actions */}
               <div className="flex flex-col gap-6">
-                
                 {/* AI Root Cause & Findings */}
                 <div className="card">
                   <div className="section-title">
@@ -580,7 +719,7 @@ const Investigate = () => {
                   </div>
                 </div>
 
-                {/* Recommended Actions (Requirement #5) */}
+                {/* Recommended Actions */}
                 <div className="card border-cyan">
                   <div className="section-title text-cyan" style={{ color: 'var(--accent-cyan)' }}>
                     <Zap size={15} /> Autonomous Action Playbook
@@ -634,7 +773,6 @@ const Investigate = () => {
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
           )}

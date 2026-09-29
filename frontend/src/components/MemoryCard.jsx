@@ -36,12 +36,24 @@ const MemoryCard = ({ memory }) => {
             <Brain size={14} />
           </div>
           <span className="text-xs font-bold uppercase tracking-wider text-cyan-400">
-            Hindsight Historical Recall
+            Hindsight Historical Recall {memory.rank ? `· Rank #${memory.rank}` : ''}
           </span>
-          <span className="badge badge-memory" style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>
-            SIMILARITY MATCH
-          </span>
+          {memory.score !== null && memory.score !== undefined ? (
+            <span className="badge badge-memory" style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>
+              Score: {typeof memory.score === 'number' ? memory.score.toFixed(2) : memory.score}
+            </span>
+          ) : (
+            <span className="badge badge-memory" style={{ fontSize: '0.65rem', padding: '0.15rem 0.5rem' }}>
+              {memory.relevance ? memory.relevance.toUpperCase() : 'RECALLED'}
+            </span>
+          )}
         </div>
+
+        {memory.document_id && (
+          <span className="tag font-mono text-[0.65rem] text-muted">
+            DOC: {memory.document_id.substring(0, 10)}
+          </span>
+        )}
 
         {parsedSeverity && (
           <StatusBadge severity={parsedSeverity} />

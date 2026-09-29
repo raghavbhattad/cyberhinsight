@@ -1,0 +1,48 @@
+flowchart TD
+    subgraph Ingestion["1. Ingestion Layer"]
+        SIEM["SIEM Webhook\n(Sentinel / Splunk / CrowdStrike)"]
+        UI["SOC Analyst Web Console\n(React 18 + Vite)"]
+    end
+
+    subgraph Backend["2. Orchestration Core (FastAPI Async)"]
+        AUTH["API Key Auth & Rate Limiting\n(X-API-Key / Request Validation)"]
+        IOC["Deterministic IOC Extractor\n(IPv4/CIDR, Domains, Hashes, Hostnames, MITRE)"]
+        ORCH["Security Agent Pipeline\n(Asyncio, Fallback Models, Structured Logging)"]
+        STORE["Incident Store\n(Atomic JSON Persistence)"]
+        CMP["Campaign Linker & Escalation Predictor\n(Subnet Matching & Progression Forecasting)"]
+    end
+
+    subgraph Intelligence["3. Dual Intelligence Engines"]
+        subgraph Groq["Groq Cloud Acceleration"]
+            LLM["openai/gpt-oss-120b\nFallback: qwen/qwen3-32b\n(Structured JSON Diagnostics)"]
+        end
+
+        subgraph Hindsight["Hindsight Cloud Vector Memory Bank"]
+            RECALL["arecall()\n(Semantic & Keyword Retrieval,\nEmpirical Scores & Rank)"]
+            RETAIN["aretain()\n(Incident & Outcome Vectors,\nDocument Upsert & Structured Tags)"]
+            REFLECT["areflect()\n(Organizational Playbook Synthesis,\nCross-Ticket Pattern Discovery)"]
+        end
+    end
+
+    subgraph Feedback["4. Learning & Feedback Loop"]
+        ANALYST["Analyst Outcome Evaluation\n(Effective / Partial / Ineffective / False Positive)"]
+    end
+
+    %% Data Flow
+    SIEM -->|POST /api/ingest/alert| AUTH
+    UI -->|POST /api/incidents/investigate| AUTH
+    AUTH --> IOC
+    IOC --> ORCH
+    ORCH -->|1. Query| RECALL
+    RECALL -->|Historical Precedents & Scores| ORCH
+    ORCH -->|2. Memory-Enriched Prompt| LLM
+    LLM -->|Validated JSON Analysis| ORCH
+    ORCH --> CMP
+    CMP -->|Campaign Links & Predictions| ORCH
+    ORCH -->|3. Retain Investigation| RETAIN
+    ORCH --> STORE
+    ORCH -->|Response with Precedents & Lift| UI
+    UI -->|POST /api/incidents/{id}/feedback| ANALYST
+    ANALYST -->|4. Retain Outcome Memory| RETAIN
+    RETAIN -.->|Enriches Future Recalls| RECALL
+    REFLECT -->|GET /api/memory/playbook| UI

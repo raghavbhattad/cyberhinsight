@@ -7,16 +7,18 @@ import {
   Archive, 
   Brain, 
   Network,
-  Activity
+  Activity,
+  TrendingUp
 } from 'lucide-react';
 
 const Sidebar = () => {
   const navItems = [
     { path: '/', label: 'Overview & Metrics', index: '01', icon: LayoutDashboard },
     { path: '/investigate', label: 'Live Investigation', index: '02', icon: Crosshair },
-    { path: '/history', label: 'Incident Archive', index: '03', icon: Archive },
-    { path: '/memory', label: 'Hindsight Memory Bank', index: '04', icon: Brain },
-    { path: '/architecture', label: 'Defense Architecture', index: '05', icon: Network },
+    { path: '/learning', label: 'Agent Learning Curve', index: '03', icon: TrendingUp },
+    { path: '/history', label: 'Incident Archive', index: '04', icon: Archive },
+    { path: '/memory', label: 'Hindsight Memory Bank', index: '05', icon: Brain },
+    { path: '/architecture', label: 'Defense Architecture', index: '06', icon: Network },
   ];
 
   return (

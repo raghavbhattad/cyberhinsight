@@ -12,9 +12,12 @@ build/
 *.egg
 .venv/
 venv/
+backend/venv/
 env/
 .pytest_cache/
 *.pyo
+.coverage
+htmlcov/
 
 # Node
 node_modules/
@@ -40,3 +43,8 @@ npm-debug.log*
 # Build artifacts
 *.tgz
 *.tar.gz
+
+# SQLite databases & runtime stores
+backend/*.db
+backend/*.sqlite
+backend/incident_store.json

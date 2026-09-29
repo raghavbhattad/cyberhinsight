@@ -5,6 +5,7 @@ import Investigate from './pages/Investigate';
 import History from './pages/History';
 import Memory from './pages/Memory';
 import Architecture from './pages/Architecture';
+import LearningCurve from './pages/LearningCurve';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="investigate" element={<Investigate />} />
           <Route path="history" element={<History />} />
           <Route path="memory" element={<Memory />} />
+          <Route path="learning" element={<LearningCurve />} />
           <Route path="architecture" element={<Architecture />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
