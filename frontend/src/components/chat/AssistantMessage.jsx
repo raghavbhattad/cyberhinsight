@@ -22,6 +22,7 @@ export default function AssistantMessage({
     report,
     suggestions = [],
     intent,
+    checked_count,
   } = message;
 
   const [isIndexed, setIsIndexed] = useState(message.memory_indexed ?? false);
@@ -94,7 +95,7 @@ export default function AssistantMessage({
       {/* Quiet action row */}
       <div className="meta-row">
         {/* Recalled Memory Chip */}
-        <SourcesChip sources={sources} />
+        <SourcesChip sources={sources} checkedCount={checked_count} />
 
         {/* Indexing status badge for stored investigations */}
         {report?.memory_stored && (

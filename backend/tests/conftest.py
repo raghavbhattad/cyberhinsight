@@ -26,6 +26,7 @@ class FakeLLM:
         }
         self.last_system_prompt: str | None = None
         self.last_user_prompt: str | None = None
+        self.last_history: list[dict] | None = None
         self.call_count = 0
 
     async def analyze_json(self, system_prompt: str, user_prompt: str, retries: int = 3) -> dict:
@@ -107,7 +108,20 @@ class FakeMemory:
         limit: int = 6,
     ) -> list[dict]:
         self.recall_call_count += 1
-        return list(self.recall_results)
+        if self.recall_results:
+            return list(self.recall_results)
+        matches = []
+        q_low = query.lower()
+        for item in self.retained_items:
+            content = item.get("content", "")
+            if q_low in content.lower():
+                matches.append({
+                    "text": content,
+                    "document_id": item.get("document_id"),
+                    "score": 0.95,
+                    "tags": item.get("tags", []),
+                })
+        return matches[:limit]
 
     async def reflect_patterns(self, query: str, tags: list[str] | None = None, budget: str = "mid") -> str | None:
         return f"Reflected pattern for: {query}"

@@ -266,9 +266,10 @@ class SIEMAlert(BaseModel):
 
 class ChatSource(BaseModel):
     id: str | None = None
+    label: str | None = None
     snippet: str
     score: float | None = None
-    kind: str | None = None  # incident | outcome | analyst_note | observation
+    kind: str | None = None  # incident | outcome | analyst_note | observation | local_log
     tags: list[str] = []
 
 
@@ -280,6 +281,7 @@ class ChatMessage(BaseModel):
     intent: str | None = None
     report: InvestigationResponse | None = None
     memory_indexed: bool | None = None
+    checked_count: int | None = None
 
 
 class ChatRequest(BaseModel):
@@ -298,6 +300,7 @@ class ChatResponse(BaseModel):
     memory_saved: bool
     memory_indexed: bool | None = None
     suggestions: list[str] = []
+    checked_count: int | None = None
 
 
 class ConversationSummary(BaseModel):

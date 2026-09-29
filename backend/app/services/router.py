@@ -23,7 +23,12 @@ _HISTORY_PATTERNS = [
 ]
 
 _INVESTIGATE_TRIGGERS = [
-    re.compile(r'\b(?:detected|observed|alert|user reported|spawned|connected to|beaconed to|executing|malware|compromise|ransomware|phishing)\b', re.IGNORECASE),
+    re.compile(
+        r'\b(?:detected|observed|alert|user reported|spawned|connected to|beaconed to|'
+        r'executing|malware|compromise|ransomware|phishing|granted consent|consent|'
+        r'oauth|docushare|sign-in from|signed in|unauthorized access)\b',
+        re.IGNORECASE
+    ),
 ]
 
 _EXTENSION_PATTERN = re.compile(r'\.(?:exe|docm|docx|xlsm|ps1|bat|cmd|vbs|js|hta|scr|dll|crypt|encrypted)\b', re.IGNORECASE)
@@ -59,7 +64,9 @@ def deterministic_intent_check(message: str) -> Tuple[IntentType | None, str]:
 
     if indicator_count >= 1 and (
         "beacon" in text.lower() or "powershell" in text.lower() or "cmd.exe" in text.lower() or
-        "encrypt" in text.lower() or "credential" in text.lower() or "invoice" in text.lower()
+        "encrypt" in text.lower() or "credential" in text.lower() or "invoice" in text.lower() or
+        "consent" in text.lower() or "oauth" in text.lower() or "docushare" in text.lower() or
+        "sign-in" in text.lower() or "phishing" in text.lower() or "malware" in text.lower()
     ):
         return "investigate", "Matched investigation: technical indicator with attack behavior"
 
@@ -89,7 +96,12 @@ async def route_intent(
         )
         try:
             parsed = await llm_service.analyze_json(system_prompt, f"User message: {message}")
-            llm_intent = parsed.get("intent", "general")
+            if isinstance(parsed, dict) and "intent" in parsed:
+                llm_intent = parsed.get("intent", "general")
+            elif isinstance(parsed, dict) and ("summary" in parsed or "root_cause" in parsed):
+                llm_intent = "investigate"
+            else:
+                llm_intent = "general"
             if llm_intent in ("investigate", "ask_history", "teach", "general"):
                 return llm_intent, f"LLM classification: {parsed.get('reason', '')}"
         except Exception as e:

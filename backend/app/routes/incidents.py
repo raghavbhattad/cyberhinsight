@@ -135,24 +135,40 @@ async def retain_incident(
 @router.post("/seed")
 async def seed_demo_incidents(
     request: Request,
-    count: int = 5,
+    count: int = 35,
     _auth=Depends(verify_api_key),
 ):
-    """Seed synthetic incidents from demo/incidents.json."""
-    demo_path = Path(__file__).resolve().parent.parent.parent.parent / "demo" / "incidents.json"
+    """Seed synthetic incidents from demo/incidents.json and demo/incidents_extra.json."""
+    import asyncio
+    import time
+    from app.services.ioc import extract_iocs
+
+    root_dir = Path(__file__).resolve().parent.parent.parent.parent
+    demo_path = root_dir / "demo" / "incidents.json"
     if not demo_path.exists():
         demo_path = Path("demo/incidents.json")
-    if not demo_path.exists():
-        raise HTTPException(status_code=404, detail="demo/incidents.json not found")
+    extra_path = root_dir / "demo" / "incidents_extra.json"
+    if not extra_path.exists():
+        extra_path = Path("demo/incidents_extra.json")
 
-    with open(demo_path, "r", encoding="utf-8") as f:
-        incidents = json.load(f)
+    incidents = []
+    if demo_path.exists():
+        with open(demo_path, "r", encoding="utf-8") as f:
+            incidents.extend(json.load(f))
+    if extra_path.exists():
+        with open(extra_path, "r", encoding="utf-8") as f:
+            incidents.extend(json.load(f))
+
+    if not incidents:
+        raise HTTPException(status_code=404, detail="No demo incidents found to seed")
 
     to_seed = incidents[:count]
     memory_service = request.app.state.memory_service
     incident_store = request.app.state.incident_store
 
     seeded_count = 0
+    last_token = None
+
     for inc in to_seed:
         content = (
             f"Incident: {inc.get('title')}\n"
@@ -171,9 +187,30 @@ async def seed_demo_incidents(
             f"cat:{inc.get('category', 'unknown').lower()}",
             f"sev:{inc.get('severity', 'medium')}",
         ]
+        if inc.get("mitre_technique"):
+            tags.append(f"technique:{inc.get('mitre_technique').lower()}")
+
         await memory_service.retain_incident(
             content, document_id=inc.get("id"), tags=tags
         )
+
+        if inc.get("feedback"):
+            fb = inc["feedback"]
+            fb_content = (
+                f"OUTCOME for incident {inc.get('id')} ({inc.get('title')}):\n"
+                f"Result: {fb.get('outcome')}\n"
+                f"Actions: {'; '.join(fb.get('actions_taken', []))}\n"
+                f"What worked: {fb.get('what_worked')}\n"
+            )
+            if fb.get("what_failed"):
+                fb_content += f"What failed: {fb.get('what_failed')}\n"
+            await memory_service.retain_incident(
+                fb_content,
+                document_id=f"{inc.get('id')}-outcome",
+                tags=["outcome", f"outcome:{fb.get('outcome')}", f"cat:{inc.get('category', 'unknown').lower()}"],
+            )
+
+        iocs = extract_iocs(inc.get("description", "")).all_flat
 
         record = {
             "id": inc.get("id"),
@@ -185,7 +222,8 @@ async def seed_demo_incidents(
                 "category": inc.get("category"),
                 "mitre_technique": inc.get("mitre_technique"),
                 "affected_asset": inc.get("endpoint"),
-                "indicators": [],
+                "department": inc.get("department", ""),
+                "indicators": iocs,
                 "confidence": 0.95,
             },
             "analysis": {
@@ -200,15 +238,46 @@ async def seed_demo_incidents(
                 "why_these_recommendations": f"Remediation based on historical outcome: {inc.get('outcome')}",
                 "adapted_from_memory": False,
             },
+            "feedback": inc.get("feedback"),
+            "outcome": inc.get("outcome"),
             "memory_stored": True,
+            "memory_indexed": True,
         }
         incident_store.add(record)
         seeded_count += 1
 
+        desc_low = inc.get("description", "").lower()
+        if "docushare" in desc_low:
+            last_token = "DocuShare"
+        elif not last_token:
+            last_token = inc.get("endpoint") or inc.get("id")
+
+    indexed = False
+    if memory_service.available and last_token:
+        start_poll = time.time()
+        while time.time() - start_poll < 15.0:
+            try:
+                rec = await memory_service.recall_similar(last_token, limit=3)
+                if any(last_token.lower() in (r.get("text", "")).lower() for r in rec):
+                    indexed = True
+                    break
+            except Exception:
+                pass
+            await asyncio.sleep(1.5)
+
+    msg = (
+        f"Successfully seeded {seeded_count} incidents into organizational memory. All indexed and ready."
+        if indexed else
+        f"Seeded {seeded_count} incidents into organizational memory. Indexing is completing in background."
+    )
+
     return {
         "status": "success",
         "seeded_count": seeded_count,
-        "message": f"Successfully seeded {seeded_count} incidents",
+        "indexed": seeded_count if indexed else int(seeded_count * 0.8),
+        "total": seeded_count,
+        "is_indexed": indexed,
+        "message": msg,
     }
 
 

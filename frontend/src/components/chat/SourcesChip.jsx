@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import { Brain, ChevronDown, ChevronUp } from 'lucide-react';
 
-export default function SourcesChip({ sources = [] }) {
+export default function SourcesChip({ sources = [], checkedCount = 0 }) {
   const [expanded, setExpanded] = useState(false);
 
   if (!sources || sources.length === 0) {
+    if (checkedCount && checkedCount > 0) {
+      return (
+        <span className="memory-chip-neutral" title="Searched Hindsight memory bank but none passed relevance/entity gates">
+          <Brain size={13} />
+          <span>Checked {checkedCount}, none relevant</span>
+        </span>
+      );
+    }
     return (
       <span className="memory-chip-empty" title="No past memories matched this turn">
         <Brain size={13} />
@@ -40,7 +48,7 @@ export default function SourcesChip({ sources = [] }) {
             return (
               <div key={src.id || idx} className="source-item">
                 <div className="source-header">
-                  <span className="source-id">{src.id || `Memory #${idx + 1}`}</span>
+                  <span className="source-id">{src.label || src.id || `Memory #${idx + 1}`}</span>
                   <span className={`source-relevance ${rel.cls}`}>{rel.label}</span>
                 </div>
                 <div className="source-snippet">{src.snippet}</div>

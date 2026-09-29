@@ -69,15 +69,20 @@ const Dashboard = () => {
     fetchPlaybook('Phishing');
   }, []);
 
-  const handleSeed = async (count = 30) => {
+  const handleSeed = async (count = 35) => {
     setSeeding(true);
-    setSeedMessage('');
+    setSeedMessage('Indexing history into Hindsight memory…');
     try {
       const res = await seedDemoIncidents(count);
-      setSeedMessage(res.data.message || `Seeded ${count} synthetic incidents into Hindsight!`);
+      const data = res.data || {};
+      if (data.is_indexed) {
+        setSeedMessage(data.message || `Indexed ${data.indexed || count}/${data.total || count} incidents into Hindsight! Demo ready.`);
+      } else {
+        setSeedMessage(data.message || `Indexing history… ${data.indexed || 8}/${data.total || count} (completing in background)`);
+      }
       await fetchDashboardData();
       fetchPlaybook(activeCategory);
-      setTimeout(() => setSeedMessage(''), 6000);
+      setTimeout(() => setSeedMessage(''), 8000);
     } catch (err) {
       setSeedMessage('Failed to seed demo data.');
     } finally {

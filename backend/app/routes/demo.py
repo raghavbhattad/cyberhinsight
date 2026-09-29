@@ -22,6 +22,13 @@ class SequenceRequest(BaseModel):
     num_incidents: int = 6
 
 
+@router.post("/seed")
+async def demo_seed(request: Request, count: int = 35, _auth=Depends(verify_api_key)):
+    """Seed synthetic incidents from demo files via /demo/seed."""
+    from app.routes.incidents import seed_demo_incidents
+    return await seed_demo_incidents(request, count=count, _auth=_auth)
+
+
 def calculate_specificity_score(
     recommendations: dict,
     why_text: str,

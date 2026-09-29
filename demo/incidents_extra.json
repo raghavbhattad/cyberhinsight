@@ -1,0 +1,42 @@
+[
+  {
+    "id": "DEMO-031",
+    "title": "OAuth Consent Phishing Targeting HR via Malicious App",
+    "description": "An HR employee on HR-WS-022 clicked a phishing email requesting signature for employment policies and granted consent to a rogue OAuth application named \"DocuShare\" hosted at docs-secure-share.example. Attacker sign-in was observed from external IP 203.0.113.77. The malicious application requested high-privilege scopes including Mail.ReadWrite and User.Read.",
+    "department": "HR",
+    "endpoint": "HR-WS-022",
+    "severity": "critical",
+    "category": "Phishing",
+    "mitre_technique": "T1528",
+    "root_cause": "User granted OAuth consent to unverified third-party cloud app DocuShare",
+    "resolution": "Revoked OAuth application consent organization-wide in Entra ID, revoked all active refresh tokens and user sessions, blocked docs-secure-share.example and IP 203.0.113.77 at firewall.",
+    "outcome": "EFFECTIVE: Revoking application consent and invalidating all OAuth refresh tokens immediately terminated unauthorized access.",
+    "timestamp": "2026-09-22T10:15:00Z",
+    "feedback": {
+      "outcome": "effective",
+      "actions_taken": ["Revoked OAuth application consent", "Revoked refresh tokens and sessions", "Blocked docs-secure-share.example", "Blocked IP 203.0.113.77"],
+      "what_worked": "Revoking OAuth app consent and active refresh tokens immediately stopped unauthorized mailbox access.",
+      "what_failed": ""
+    }
+  },
+  {
+    "id": "DEMO-032",
+    "title": "OAuth Consent Phishing Targeting Marketing Department",
+    "description": "A marketing specialist on MKT-WS-019 was tricked into granting OAuth permissions to a fake analytics tool after a phishing lure. Authentication logs showed adversary access from 203.0.113.77. The SOC initially attempted a user password reset in Active Directory, but the attacker maintained persistent access through valid cloud refresh tokens.",
+    "department": "Marketing",
+    "endpoint": "MKT-WS-019",
+    "severity": "high",
+    "category": "Phishing",
+    "mitre_technique": "T1528",
+    "root_cause": "Illicit OAuth consent grant bypassed password controls via persistent refresh tokens",
+    "resolution": "Password reset alone failed because OAuth tokens remained active. Remediation succeeded only after tenant-wide app consent revocation and revoking all OAuth refresh tokens and sessions.",
+    "outcome": "NOT EFFECTIVE: Password reset alone was ineffective because OAuth refresh tokens remained valid. Revoking application consent and session tokens was required.",
+    "timestamp": "2026-09-21T14:40:00Z",
+    "feedback": {
+      "outcome": "ineffective",
+      "actions_taken": ["Password reset in Active Directory"],
+      "what_worked": "Revoking OAuth app consent and active session tokens",
+      "what_failed": "Password reset alone without revoking OAuth consent and refresh tokens"
+    }
+  }
+]
